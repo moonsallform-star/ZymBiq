@@ -220,6 +220,27 @@
   }
 }
 
+@keyframes emobot-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25%       { transform: translateY(-3px) rotate(0.5deg); }
+  75%       { transform: translateY(-1.5px) rotate(-0.3deg); }
+}
+
+@keyframes emobot-antenna-pulse {
+  0%, 100% { r: 1.2; opacity: 0.6; }
+  50%       { r: 2.2; opacity: 1;   }
+}
+
+@keyframes emobot-eye-glow {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1;   }
+}
+
+@keyframes emobot-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95%            { transform: scaleY(0.05); }
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

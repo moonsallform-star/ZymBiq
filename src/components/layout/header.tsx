@@ -21,6 +21,7 @@ import { QUERY_KEYS } from "@/lib/constants";
 import { useStore } from "@/store/index";
 import { cloudinaryLoader } from "@/lib/cloudinary-loader";
 import { Button } from "@/components/ui/button";
+import LogoEmobot from "@/components/layout/logo-emobot";
 
 import {
   Avatar,
@@ -475,9 +476,7 @@ export default function Header() {
               priority
             />
           ) : (
-            <span className="text-lg font-semibold tracking-tight font-heading text-[var(--zymbiq-text)]">
-              {platformName}
-            </span>
+            <LogoEmobot width={110} platformName={platformName} />
           )}
         </Link>
 

@@ -97,6 +97,15 @@
   --z-modal:              100;
   --z-toast:              110;
 
+  /* ── LogoEmobot tokens ── */
+  --zymbiq-emobot-face:       var(--zymbiq-surface);
+  --zymbiq-emobot-eye:        var(--zymbiq-accent);
+  --zymbiq-emobot-stroke:     var(--zymbiq-accent);
+  --zymbiq-emobot-glow:       color-mix(in srgb, var(--zymbiq-accent) 30%, transparent);
+  --zymbiq-emobot-shine:      rgba(255, 255, 255, 0.9);
+  --zymbiq-emobot-float-dur:  5s;
+  --zymbiq-emobot-blink-dur:  0.12s;
+
   /* ── Zymbiq Brand Atmosphere System ── */
   --zymbiq-forge-line:    rgba(99, 102, 241, 0.14);
   --zymbiq-forge-glow:    rgba(99, 102, 241, 0.06);
