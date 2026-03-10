@@ -230,7 +230,11 @@ export default function AdminMessagesClient({ threads: initialThreads }: AdminMe
       {/* ------------------------------------------------------------------ */}
       {/* Thread list — left panel                                             */}
       {/* ------------------------------------------------------------------ */}
-      <aside className="w-[280px] shrink-0 border-r border-border flex flex-col overflow-hidden">
+      <aside className={cn(
+        "shrink-0 border-r border-border flex flex-col overflow-hidden",
+        "w-full md:w-[280px]",
+        selectedThreadId ? "hidden md:flex" : "flex"
+      )}>
         {threads.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-3 px-6 text-center">
             <MessageSquare className="h-8 w-8 text-muted" />
@@ -297,7 +301,10 @@ export default function AdminMessagesClient({ threads: initialThreads }: AdminMe
       {/* ------------------------------------------------------------------ */}
       {/* Message panel — right                                                */}
       {/* ------------------------------------------------------------------ */}
-      <section className="flex flex-col flex-1 overflow-hidden">
+      <section className={cn(
+        "flex flex-col flex-1 overflow-hidden",
+        !selectedThreadId ? "hidden md:flex" : "flex"
+      )}>
         {!selectedThreadId ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center">
             <MessageSquare className="h-10 w-10 text-muted" />
@@ -306,7 +313,14 @@ export default function AdminMessagesClient({ threads: initialThreads }: AdminMe
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-3 border-b border-border shrink-0">
+            <div className="flex items-center gap-3 px-3 md:px-6 py-3 border-b border-border shrink-0">
+              <button
+                className="md:hidden flex items-center justify-center h-8 w-8 rounded-md text-muted hover:text-foreground hover:bg-muted/10 shrink-0"
+                onClick={() => setSelectedThreadId(null)}
+                aria-label="Back to conversations"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-xs">
                   {getInitials(selectedThread?.userName ?? 'Anonymous')}

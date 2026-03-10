@@ -22,7 +22,7 @@ export default async function AdminAnalyticsPage() {
   }
 
   return (
-    <div className="py-8 px-4 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-heading font-semibold text-foreground">
           Analytics

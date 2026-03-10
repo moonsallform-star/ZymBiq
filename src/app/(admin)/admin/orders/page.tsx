@@ -17,9 +17,9 @@ export default async function AdminOrdersPage() {
   }
 
   return (
-    <div className="py-8 px-4">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Page heading */}
-      <div className="mb-6">
+      <div className="px-6 py-6 shrink-0">
         <h1 className="text-2xl font-heading font-semibold text-foreground">
           Order Management
         </h1>
@@ -28,8 +28,10 @@ export default async function AdminOrdersPage() {
         </p>
       </div>
 
-      {/* Kanban board — handles its own data fetching, DnD, and Realtime */}
-      <OrderKanban />
+      {/* Kanban board — horizontally scrollable on mobile */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6 min-h-0">
+        <OrderKanban />
+      </div>
     </div>
   );
 }

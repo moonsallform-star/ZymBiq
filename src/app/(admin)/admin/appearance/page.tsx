@@ -22,7 +22,7 @@ export default async function AdminAppearancePage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <AppearanceEditor />
     </div>
   );

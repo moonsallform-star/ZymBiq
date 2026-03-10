@@ -21,7 +21,7 @@ export default async function AdminContentPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 lg:p-8">
       <div>
         <h1 className="text-2xl font-heading font-semibold text-foreground">
           Content Management

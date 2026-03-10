@@ -28,7 +28,7 @@ export default async function AdminPaymentsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 lg:p-8">
       {/* Page heading */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--zymbiq-text)]">

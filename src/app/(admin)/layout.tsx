@@ -246,7 +246,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--zymbiq-bg)] relative">
+    <div className="min-h-screen bg-[var(--zymbiq-bg)] relative">
 
       {/* ── Forge canvas atmosphere — matches public layout ── */}
       <div className="forge-canvas pointer-events-none" aria-hidden="true">
@@ -286,13 +286,13 @@ export default async function AdminLayout({
       </div>
 
       {/* Main content offset by sidebar width on desktop */}
-      <div className="relative z-10 flex h-screen flex-col md:ml-60">
+      <div className="relative z-10 flex min-h-screen flex-col md:ml-60">
         <AdminTopBar
           adminName={session.user.name}
           adminEmail={session.user.email}
         />
 
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
           <RealtimeProvider>{children}</RealtimeProvider>
         </main>
       </div>
