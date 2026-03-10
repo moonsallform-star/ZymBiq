@@ -1,8 +1,6 @@
 // =============================================================================
 // Zymbiq — src/components/3d/hero-particle-mesh.tsx
 // Pure Canvas 2D particle constellation — zero WebGL, zero context loss.
-// Additive glow via globalCompositeOperation. Mouse-reactive. Breathing.
-// Loaded via next/dynamic with ssr: false. Never import directly.
 // =============================================================================
 
 'use client';
@@ -14,38 +12,35 @@ import { useStore } from '@/store/index';
 // Tuning
 // -----------------------------------------------------------------------------
 
-const PARTICLE_COUNT = 180;
-const BASE_RADIUS    = 0.38;  // fraction of min(width, height)
-const LERP           = 0.055;
-const FPS_CAP        = 55;
+const PARTICLE_COUNT = 160;
+const FPS_CAP        = 60;
+const LERP           = 0.04;
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
 interface Particle {
-  // Spherical coords — projected to 2D each frame
-  theta: number;   // azimuth
-  phi:   number;   // polar
-  shell: number;   // 0 = inner, 1 = mid, 2 = outer
+  // Position on unit sphere
+  theta:       number;
+  phi:         number;
+  shellFrac:   number; // 0..1 — fraction of max radius
   // Visual
-  size:     number;
-  baseAlpha: number;
-  phase:    number;  // breathing phase offset
+  size:        number;
+  baseAlpha:   number;
+  phase:       number;
   breathSpeed: number;
-  // Drift — slow autonomous movement on sphere surface
-  dTheta: number;
-  dPhi:   number;
+  // Autonomous drift
+  dTheta:      number;
+  dPhi:        number;
 }
 
 // -----------------------------------------------------------------------------
-// Build particle data once
+// Build particles — Fibonacci sphere distribution
 // -----------------------------------------------------------------------------
 
 function buildParticles(): Particle[] {
-  const particles: Particle[] = [];
-
-  // Fibonacci sphere for even angular distribution
+  const list: Particle[] = [];
   const golden = Math.PI * (3 - Math.sqrt(5));
 
   for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -53,261 +48,247 @@ function buildParticles(): Particle[] {
     const theta = golden * i;
     const phi   = Math.acos(Math.max(-1, Math.min(1, y)));
 
-    // Shell: 10% inner · 55% mid · 35% outer
-    const sr    = Math.random();
-    const shell = sr < 0.10 ? 0 : sr < 0.65 ? 1 : 2;
+    // Shell bands
+    const sr       = Math.random();
+    const shellFrac =
+      sr < 0.10 ? 0.28 + Math.random() * 0.12 :   // inner  — 10%
+      sr < 0.60 ? 0.52 + Math.random() * 0.26 :   // mid    — 50%
+                  0.82 + Math.random() * 0.18;     // outer  — 40%
 
-    const shellScale = shell === 0 ? 0.38 + Math.random() * 0.12
-                     : shell === 1 ? 0.62 + Math.random() * 0.22
-                     :               0.88 + Math.random() * 0.18;
+    const isInner = shellFrac < 0.42;
+    const isMid   = shellFrac < 0.80;
 
-    // Inner = large + bright, outer = small + dim
-    const size =
-      shell === 0 ? 2.2 + Math.random() * 1.2 :
-      shell === 1 ? 1.2 + Math.random() * 0.8 :
-                    0.5 + Math.random() * 0.6;
-
-    const baseAlpha =
-      shell === 0 ? 0.75 + Math.random() * 0.25 :
-      shell === 1 ? 0.40 + Math.random() * 0.30 :
-                    0.15 + Math.random() * 0.20;
-
-    particles.push({
+    list.push({
       theta,
       phi,
-      shell,
-      size,
-      baseAlpha,
+      shellFrac,
+      size:        isInner ? 2.8 + Math.random() * 1.4
+                 : isMid   ? 1.4 + Math.random() * 0.9
+                 :            0.5 + Math.random() * 0.7,
+      baseAlpha:   isInner ? 0.80 + Math.random() * 0.20
+                 : isMid   ? 0.42 + Math.random() * 0.28
+                 :            0.14 + Math.random() * 0.18,
       phase:       Math.random() * Math.PI * 2,
-      breathSpeed: shell === 0 ? 0.5 + Math.random() * 0.3
-                 : shell === 1 ? 0.7 + Math.random() * 0.4
-                 :               1.0 + Math.random() * 0.6,
-      dTheta: (Math.random() - 0.5) * 0.0006 * (shell === 0 ? 0.4 : 1),
+      breathSpeed: isInner ? 0.45 + Math.random() * 0.25
+                 : isMid   ? 0.65 + Math.random() * 0.35
+                 :            0.90 + Math.random() * 0.55,
+      dTheta: (Math.random() - 0.5) * (isInner ? 0.0004 : 0.0008),
       dPhi:   (Math.random() - 0.5) * 0.0003,
-      // store shellScale in dPhi slot — extend type:
-      ...(({ shellScale }) => ({ shellScale })  )({ shellScale }),
-    } as Particle & { shellScale: number });
+    });
   }
-
-  return particles;
+  return list;
 }
 
 // -----------------------------------------------------------------------------
-// CSS hex reader
+// Hex colour → {r,g,b}
 // -----------------------------------------------------------------------------
 
-function getCssHex(name: string): string {
-  if (typeof window === 'undefined') return '#6366f1';
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#6366f1';
-}
-
-// Parse hex → {r,g,b}
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const clean = hex.replace('#', '').trim();
-  const full  = clean.length === 3
-    ? clean.split('').map(c => c + c).join('')
-    : clean;
-  const n = parseInt(full, 16);
+  const h = hex.replace('#', '').trim();
+  const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(f, 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
+function getCssHex(name: string): string {
+  if (typeof window === 'undefined') return '#818cf8';
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
+    '#818cf8'
+  );
+}
+
 // -----------------------------------------------------------------------------
-// Main component
+// Exported guard component
 // -----------------------------------------------------------------------------
 
 export default function HeroParticleMesh() {
   const animationIntensity = useStore((s) => s.animationIntensity);
   if (animationIntensity === 'off') return null;
-
   return <ParticleCanvas reduced={animationIntensity === 'reduced'} />;
 }
 
 // -----------------------------------------------------------------------------
-// Canvas component
+// Canvas component — all logic lives in one useEffect, zero re-renders
 // -----------------------------------------------------------------------------
 
 function ParticleCanvas({ reduced }: { reduced: boolean }) {
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const mouseRef   = useRef({ x: 0, y: 0 });
-  const targetRef  = useRef({ x: 0, y: 0 });
-  const currentRef = useRef({ x: 0, y: 0 });
-  const rafRef     = useRef<number>(0);
-  const lastRef    = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef  = useRef({ nx: 0, ny: 0 }); // normalised -1..1
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const onMouseMove = useCallback((e: MouseEvent) => {
     if (reduced) return;
-    const nx =  (e.clientX / window.innerWidth)  * 2 - 1;
-    const ny = -((e.clientY / window.innerHeight) * 2 - 1);
-    mouseRef.current = { x: nx, y: ny };
+    mouseRef.current = {
+      nx:  (e.clientX / window.innerWidth)  * 2 - 1,
+      ny: -((e.clientY / window.innerHeight) * 2 - 1),
+    };
   }, [reduced]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // ── Context ────────────────────────────────────────────────────────────
     const ctx = canvas.getContext('2d')!;
-    if (!ctx) return;
 
-    // ── Build particles once ─────────────────────────────────────────────
-    const particles = buildParticles() as (Particle & { shellScale: number })[];
+    // ── Particles ──────────────────────────────────────────────────────────
+    const particles = buildParticles();
 
-    // ── Color ────────────────────────────────────────────────────────────
-    const hex = getCssHex('--zymbiq-accent');
-    const rgb = hexToRgb(hex);
+    // ── Colour ─────────────────────────────────────────────────────────────
+    const rgb = hexToRgb(getCssHex('--zymbiq-accent'));
 
-    // ── Resize handler ───────────────────────────────────────────────────
+    // ── Resize — sets canvas pixel dimensions to match CSS size ────────────
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
     function resize() {
-      if (!canvas) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      // Use parent dimensions if canvas has no intrinsic size yet
-      const w = canvas.parentElement?.clientWidth  || window.innerWidth;
-      const h = canvas.parentElement?.clientHeight || window.innerHeight;
-      canvas.width  = w * dpr;
-      canvas.height = h * dpr;
-      // Reset transform before scaling — prevents scale accumulation on resize
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
+      const parent = canvas!.parentElement;
+      const w = parent ? parent.clientWidth  : window.innerWidth;
+      const h = parent ? parent.clientHeight : window.innerHeight;
+      canvas!.width  = w * dpr;
+      canvas!.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement ?? canvas);
 
-    // ── Rotation state ───────────────────────────────────────────────────
-    let rotX = 0; // pitch (mouse Y)
-    let rotY = 0; // yaw   (mouse X)
-    // Autonomous drift accumulators
-    let autoT = 0;
+    // ── Smooth rotation accumulators ───────────────────────────────────────
+    let curRotX = 0;  // current pitch  (responds to mouse Y)
+    let curRotY = 0;  // current yaw    (responds to mouse X)
+    let autoT   = 0;  // autonomous time accumulator
 
-    // ── Project 3D sphere point to 2D ────────────────────────────────────
+    // ── RAF state ──────────────────────────────────────────────────────────
+    let rafId   = 0;
+    let lastTs  = 0;
+
+    // ── Project ONE particle to screen XY ──────────────────────────────────
+    // Uses simple perspective projection — no matrix library needed.
     function project(
-      theta: number,
-      phi: number,
-      shellRadius: number,
+      p: Particle,
+      R: number,   // max sphere radius in CSS px
       cx: number,
       cy: number,
-      R: number,
-    ): { x: number; y: number; z: number } {
+    ): { sx: number; sy: number; depth: number } {
+      const rad = p.shellFrac * R;
+
       // Spherical → Cartesian
-      const x0 = Math.sin(phi) * Math.cos(theta) * shellRadius;
-      const y0 = Math.cos(phi) * shellRadius;
-      const z0 = Math.sin(phi) * Math.sin(theta) * shellRadius;
+      const sinPhi = Math.sin(p.phi);
+      const cosPhi = Math.cos(p.phi);
+      const x0 =  sinPhi * Math.cos(p.theta) * rad;
+      const y0 =  cosPhi * rad;
+      const z0 =  sinPhi * Math.sin(p.theta) * rad;
 
-      // Rotate around X (pitch)
-      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-      const y1   =  y0 * cosX - z0 * sinX;
-      const z1   =  y0 * sinX + z0 * cosX;
+      // Rotate around X axis (pitch — driven by mouse Y)
+      const cosRX = Math.cos(curRotX), sinRX = Math.sin(curRotX);
+      const y1    =  y0 * cosRX - z0 * sinRX;
+      const z1    =  y0 * sinRX + z0 * cosRX;
 
-      // Rotate around Y (yaw)
-      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
-      const x2   =  x0 * cosY + z1 * sinY;
-      const z2   = -x0 * sinY + z1 * cosY;
+      // Rotate around Y axis (yaw — driven by mouse X)
+      const cosRY = Math.cos(curRotY), sinRY = Math.sin(curRotY);
+      const x2    =  x0 * cosRY + z1 * sinRY;
+      const z2    = -x0 * sinRY + z1 * cosRY;
 
-      // Simple perspective divide
-      const fov  = 2.8;
-      const persp = fov / (fov + z2 / R);
+      // Perspective divide — focal length = 2.2 * R
+      const focal = R * 2.2;
+      const w     = focal / (focal + z2);
 
       return {
-        x: cx + x2 * R * persp,
-        y: cy - y1 * R * persp,
-        z: z2,
+        sx:    cx + x2 * w,
+        sy:    cy - y1 * w,
+        depth: z2,           // positive = closer to viewer
       };
     }
 
-    // ── Draw frame ────────────────────────────────────────────────────────
-    function draw(ts: number) {
-      if (!canvas) return;
-      rafRef.current = requestAnimationFrame(draw);
+    // ── Main draw loop ─────────────────────────────────────────────────────
+    function frame(ts: number) {
+      rafId = requestAnimationFrame(frame);
 
       // FPS cap
-      const elapsed = ts - lastRef.current;
-      if (elapsed < 1000 / FPS_CAP) return;
-      lastRef.current = ts;
-
-      const dt = Math.min(elapsed * 0.001, 0.05); // seconds, capped
+      if (ts - lastTs < 1000 / FPS_CAP) return;
+      const dt = Math.min((ts - lastTs) * 0.001, 0.05);
+      lastTs = ts;
       autoT += dt;
 
-      const W = canvas.parentElement?.clientWidth  || canvas.offsetWidth;
-      const H = canvas.parentElement?.clientHeight || canvas.offsetHeight;
-      const R = Math.min(W, H) * BASE_RADIUS;
+      // Canvas logical size (CSS pixels, already scaled by dpr via transform)
+      const W  = canvas!.width  / dpr;
+      const H  = canvas!.height / dpr;
       const cx = W * 0.5;
       const cy = H * 0.5;
 
-      // Smooth mouse lerp
-      targetRef.current.x = mouseRef.current.x * 0.55 +
-        Math.sin(autoT * 0.13) * 0.22 + Math.cos(autoT * 0.07) * 0.10;
-      targetRef.current.y = mouseRef.current.y * 0.55 +
-        Math.sin(autoT * 0.09) * 0.28 + Math.cos(autoT * 0.05) * 0.12;
+      // Sphere radius = 42% of the shorter dimension
+      const R  = Math.min(W, H) * 0.42;
 
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * LERP;
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * LERP;
+      // ── Smooth rotation towards target ──────────────────────────────────
+      const targetRotY =
+        mouseRef.current.nx * 0.7 +
+        Math.sin(autoT * 0.11) * 0.35 +
+        Math.cos(autoT * 0.07) * 0.15;
 
-      rotY = currentRef.current.x;
-      rotX = currentRef.current.y * -1;
+      const targetRotX =
+        mouseRef.current.ny * -0.5 +
+        Math.sin(autoT * 0.08) * 0.20 +
+        Math.cos(autoT * 0.05) * 0.10;
 
-      // Clear
-      ctx.clearRect(0, 0, W, H);
+      curRotY += (targetRotY - curRotY) * LERP;
+      curRotX += (targetRotX - curRotX) * LERP;
 
-      // Update + collect projected particles
-      const projected: {
-        px: number; py: number; pz: number;
-        size: number; alpha: number;
-      }[] = [];
-
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-
-        // Drift on sphere surface
+      // ── Drift particles on sphere surface ───────────────────────────────
+      for (const p of particles) {
         p.theta += p.dTheta;
         p.phi   += p.dPhi;
-        // Bounce phi
-        if (p.phi < 0.05)      { p.phi = 0.05;      p.dPhi *= -1; }
-        if (p.phi > Math.PI - 0.05) { p.phi = Math.PI - 0.05; p.dPhi *= -1; }
-
-        // Breathing
-        const breath = 0.88 + 0.12 * Math.sin(autoT * p.breathSpeed + p.phase);
-
-        const { x: px, y: py, z: pz } = project(
-          p.theta, p.phi, p.shellScale * R, cx, cy, R
-        );
-
-        // Depth alpha: particles behind sphere centre are dimmer
-        const depthFade = 0.4 + 0.6 * ((pz / R + 1) * 0.5);
-
-        projected.push({
-          px, py, pz,
-          size:  p.size * breath,
-          alpha: p.baseAlpha * depthFade * breath,
-        });
+        if (p.phi < 0.05 || p.phi > Math.PI - 0.05) p.dPhi *= -1;
       }
 
-      // Sort back-to-front so foreground particles draw on top
-      projected.sort((a, b) => a.pz - b.pz);
+      // ── Project all particles ────────────────────────────────────────────
+      const projected = particles.map((p, i) => {
+        const breath = 0.86 + 0.14 * Math.sin(autoT * p.breathSpeed + p.phase);
+        const { sx, sy, depth } = project(p, R, cx, cy);
 
-      // Draw with additive-style glow
+        // Depth-based alpha — back hemisphere fades out
+        const depthNorm  = (depth / R + 1) * 0.5;          // 0=back, 1=front
+        const depthAlpha = 0.15 + 0.85 * depthNorm;
+
+        return {
+          sx, sy,
+          depth,
+          size:  p.size  * breath,
+          alpha: p.baseAlpha * depthAlpha * breath,
+          i,
+        };
+      });
+
+      // Back-to-front sort so front particles overdraw back ones
+      projected.sort((a, b) => a.depth - b.depth);
+
+      // ── Clear ────────────────────────────────────────────────────────────
+      ctx.clearRect(0, 0, W, H);
+
+      // ── Draw particles with additive glow ────────────────────────────────
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
 
-      for (const { px, py, size, alpha } of projected) {
-        if (alpha < 0.02) continue;
+      for (const { sx, sy, size, alpha } of projected) {
+        if (alpha < 0.015) continue;
 
         // Outer soft halo
-        const haloR = size * 3.5;
-        const halo  = ctx.createRadialGradient(px, py, 0, px, py, haloR);
-        halo.addColorStop(0,   `rgba(${rgb.r},${rgb.g},${rgb.b},${(alpha * 0.35).toFixed(3)})`);
+        const haloR = size * 4;
+        const halo  = ctx.createRadialGradient(sx, sy, 0, sx, sy, haloR);
+        halo.addColorStop(0,   `rgba(${rgb.r},${rgb.g},${rgb.b},${(alpha * 0.3).toFixed(3)})`);
         halo.addColorStop(1,   `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
         ctx.beginPath();
-        ctx.arc(px, py, haloR, 0, Math.PI * 2);
+        ctx.arc(sx, sy, haloR, 0, Math.PI * 2);
         ctx.fillStyle = halo;
         ctx.fill();
 
         // Bright core
-        const coreR = size * 0.9;
-        const core  = ctx.createRadialGradient(px, py, 0, px, py, coreR);
-        core.addColorStop(0,   `rgba(255,255,255,${(alpha * 0.9).toFixed(3)})`);
-        core.addColorStop(0.3, `rgba(${rgb.r},${rgb.g},${rgb.b},${(alpha * 0.8).toFixed(3)})`);
+        const coreR = Math.max(size, 0.5);
+        const core  = ctx.createRadialGradient(sx, sy, 0, sx, sy, coreR);
+        core.addColorStop(0,   `rgba(255,255,255,${(alpha).toFixed(3)})`);
+        core.addColorStop(0.4, `rgba(${rgb.r},${rgb.g},${rgb.b},${(alpha * 0.85).toFixed(3)})`);
         core.addColorStop(1,   `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
         ctx.beginPath();
-        ctx.arc(px, py, coreR, 0, Math.PI * 2);
+        ctx.arc(sx, sy, coreR, 0, Math.PI * 2);
         ctx.fillStyle = core;
         ctx.fill();
       }
@@ -315,16 +296,15 @@ function ParticleCanvas({ reduced }: { reduced: boolean }) {
       ctx.restore();
     }
 
-    rafRef.current = requestAnimationFrame(draw);
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    rafId = requestAnimationFrame(frame);
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(rafId);
       ro.disconnect();
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousemove', onMouseMove);
     };
-  }, [reduced, handleMouseMove]);
+  }, [reduced, onMouseMove]);
 
   return (
     <canvas
@@ -332,7 +312,7 @@ function ParticleCanvas({ reduced }: { reduced: boolean }) {
       style={{
         position: 'absolute',
         inset: 0,
-        width: '100%',
+        width:  '100%',
         height: '100%',
         zIndex: 0,
         pointerEvents: 'none',
