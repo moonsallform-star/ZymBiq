@@ -52,7 +52,6 @@ export default function PageTransition({
         initial="hidden"
         animate="enter"
         exit="exit"
-        style={{ minHeight: '100vh' }}
       >
         {children}
       </motion.div>
