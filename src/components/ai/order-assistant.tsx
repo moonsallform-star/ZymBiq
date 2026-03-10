@@ -502,7 +502,9 @@ body: JSON.stringify({
       sessionStorage.removeItem(SESSION_KEY_ESTIMATE);
       sessionStorage.removeItem(SESSION_KEY_COMPLETE);
 
-      router.push(`/checkout/order/${data.data.orderId}`);
+      // Custom orders go to tracker first — payment happens after admin
+      // reviews the brief, confirms scope, and moves order to BUILDING.
+      router.push(`/track/${data.data.trackingCode}`);
     },
   });
 

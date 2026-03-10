@@ -205,7 +205,9 @@ function OrderDetailPanel({ order }: OrderDetailPanelProps) {
           <Badge variant={getPaymentVariant(order.paymentStatus)}>
             {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
           </Badge>
-          {order.paymentStatus === "PENDING" && order.status !== "CANCELLED" && (
+          {order.paymentStatus === "PENDING" &&
+            order.status !== "CANCELLED" &&
+            !(order.orderType === "CUSTOM" && (order.status === "NEW" || order.status === "IN_DISCUSSION")) && (
             <Link
               href={
                 order.orderType === "CUSTOM"

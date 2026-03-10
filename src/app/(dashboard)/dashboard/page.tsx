@@ -239,7 +239,9 @@ export default async function DashboardPage() {
                             <Badge variant={getStatusVariant(order.status)}>
                               {ORDER_STATUS_LABELS[order.status] ?? order.status}
                             </Badge>
-                            {order.paymentStatus === "PENDING" && order.status !== "CANCELLED" && (
+                            {order.paymentStatus === "PENDING" &&
+                              order.status !== "CANCELLED" &&
+                              !(order.orderType === "CUSTOM" && (order.status === "NEW" || order.status === "IN_DISCUSSION")) && (
                               <Link
                                 href={
                                   order.orderType === "CUSTOM"

@@ -89,8 +89,8 @@ export default async function CustomOrderCheckoutPage({ params }: CustomCheckout
   const amountUsd = order.amountUsd ?? order.estimatedPrice ?? 0;
 
   if (amountUsd <= 0) {
-    // No estimate yet — redirect to tracker with a message
-    redirect(`/track/${order.trackingCode}?notice=awaiting-estimate`);
+    // Price not yet confirmed by admin — show waiting state instead of blank checkout
+    redirect(`/track/${order.trackingCode}?notice=awaiting-price`);
   }
 
   const paymentsConfig = await getPaymentsConfig();
