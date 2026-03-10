@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import RealtimeProvider from "@/components/providers/realtime-provider";
 import {
+  LayoutDashboard,
   FolderOpen,
   ShoppingBag,
   Users,
