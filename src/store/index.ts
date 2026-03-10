@@ -206,6 +206,7 @@ export const useStore = create<StoreState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        if (typeof document === 'undefined') return;
         if (state.darkMode) {
           document.documentElement.classList.add('dark');
         } else {

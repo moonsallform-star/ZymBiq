@@ -62,7 +62,7 @@ function safeParseJson<T>(raw: unknown, fallback: T): T {
 // -----------------------------------------------------------------------------
 
 async function fetchSiteConfig(): Promise<ParsedSiteConfig> {
-    const response = await fetch('/api/admin/site-config', { cache: 'no-store' });
+  const response = await fetch('/api/admin/site-config', { cache: 'no-store' });
 
   if (!response.ok) {
     // Return defaults silently for non-admin users (403) or any other failure
@@ -148,11 +148,11 @@ export function useSiteConfig(): {
   const { data, isLoading, error } = useQuery<ParsedSiteConfig, Error>({
     queryKey: QUERY_KEYS.siteConfig(),
     queryFn: fetchSiteConfig,
-    staleTime: 0,
-    gcTime: 5 * 60 * 1000,
+    staleTime: SITE_CONFIG_STALE_TIME_MS,
+    gcTime: 10 * 60 * 1000,
     retry: 1,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Sync animation intensity and loaded flag into Zustand whenever data arrives
