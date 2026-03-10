@@ -21,7 +21,9 @@ import {
   Settings,
   CreditCard,
   LogOut,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import AdminNavLink from "./_components/admin-nav-link";
 import AdminMobileNav from "./_components/admin-mobile-nav";
 import AdminThemeToggle from "./_components/admin-theme-toggle";
@@ -198,8 +200,26 @@ function AdminTopBar({
       {/* Spacer — individual pages own their heading content */}
       <div className="flex-1" />
 
-      {/* Right side: theme toggle + admin indicator */}
+      {/* Right side: view site + theme toggle + admin indicator */}
       <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-accent/10 hover:text-accent hover:border-accent/40"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          View Site
+        </Link>
+        <Link
+          href="/dashboard"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-accent/10 hover:text-accent hover:border-accent/40"
+        >
+          <LayoutDashboard className="h-3.5 w-3.5" />
+          Dashboard
+        </Link>
         <AdminThemeToggle />
         <div className="hidden md:flex items-center gap-2">
           <span className="text-xs text-muted truncate max-w-[180px]">
