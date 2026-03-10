@@ -277,7 +277,7 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
                 showDevforge &&
                 devforgeData?.activeProject && (
                   <motion.div
-                    className="mt-3 w-full max-w-xs rounded-lg border border-border bg-surface p-3 shadow-sm"
+                    className="mt-3 w-full rounded-lg border border-border bg-surface p-3 shadow-sm"
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}

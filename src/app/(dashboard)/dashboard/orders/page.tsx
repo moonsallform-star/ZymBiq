@@ -369,21 +369,50 @@ export default async function DashboardOrdersPage({
   const selectedOrder =
     (orderId ? allOrders.find((o) => o.id === orderId) : null) ?? allOrders[0];
 
+  const isDetailView = Boolean(orderId) && Boolean(selectedOrder);
+
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-semibold text-foreground">My Orders</h1>
+    <div className="container mx-auto max-w-6xl px-4 py-6 md:py-10">
+      {/* Page heading — hidden on mobile when viewing detail */}
+      <div className={cn("mb-6 flex items-center gap-3", isDetailView && "hidden md:flex")}>
+        <h1 className="text-2xl font-semibold text-foreground">My Orders</h1>
+        <span className="text-sm text-muted">
+          ({allOrders.length} {allOrders.length === 1 ? "order" : "orders"})
+        </span>
+      </div>
+
+      {/* Mobile back button — only visible on mobile when viewing detail */}
+      {isDetailView && (
+        <div className="mb-4 flex items-center gap-2 md:hidden">
+          <Link
+            href="/dashboard/orders"
+            className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Orders
+          </Link>
+        </div>
+      )}
 
       <div
         className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
         style={{ minHeight: "600px" }}
       >
-        <div className="grid h-full"
-          style={{ gridTemplateColumns: "320px 1fr" }}
+        {/* On mobile: show list OR detail. On md+: show both side by side */}
+        <div className="flex h-full flex-col md:grid md:h-full"
+          style={{ gridTemplateColumns: "300px 1fr" }}
         >
           {/* ----------------------------------------------------------------
               Left sidebar — order list
+              Hidden on mobile when an order is selected (isDetailView)
           ---------------------------------------------------------------- */}
-          <aside className="overflow-y-auto border-r border-border">
+          <aside className={cn(
+            "overflow-y-auto border-border",
+            "md:border-r",
+            isDetailView ? "hidden md:block" : "block"
+          )}>
             <div className="border-b border-border px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                 {allOrders.length} {allOrders.length === 1 ? "Order" : "Orders"}
@@ -400,14 +429,18 @@ export default async function DashboardOrdersPage({
 
           {/* ----------------------------------------------------------------
               Right panel — order detail
+              Hidden on mobile when no order selected (show list instead)
           ---------------------------------------------------------------- */}
-          <main className="overflow-hidden">
+          <main className={cn(
+            "overflow-hidden",
+            isDetailView ? "block" : "hidden md:flex md:items-center md:justify-center"
+          )}>
             {selectedOrder ? (
               <OrderDetailPanel order={selectedOrder as OrderWithDetails} />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted">
+              <p className="hidden md:block text-sm text-muted px-6">
                 Select an order to view details.
-              </div>
+              </p>
             )}
           </main>
         </div>
