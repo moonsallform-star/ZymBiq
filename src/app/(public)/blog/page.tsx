@@ -17,10 +17,23 @@ export const revalidate = 60;
 // Metadata
 // ---------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: 'Blog — Zymbiq',
-  description: 'Insights, tutorials, and updates from the Zymbiq developer.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+  return {
+    title: "Blog — Web Development Insights | Zymbiq",
+    description:
+      "Tutorials, insights, and updates on web development, Next.js, and building production-ready websites.",
+    alternates: { canonical: `${baseUrl}/blog` },
+    openGraph: {
+      title: "Blog — Web Development Insights | Zymbiq",
+      description:
+        "Tutorials, insights, and updates on web development, Next.js, and building production-ready websites.",
+      url: `${baseUrl}/blog`,
+      type: "website",
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Constants

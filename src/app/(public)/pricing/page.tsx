@@ -27,17 +27,32 @@ export const revalidate = 300;
 // Metadata
 // ---------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: "Pricing — Zymbiq",
-  description:
-    "Transparent, one-time pricing for production-ready websites. No subscriptions, no surprises.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+  return {
+    title: "Pricing — One-Time Website Pricing | Zymbiq",
+    description:
+      "Transparent, one-time pricing for production-ready websites. No subscriptions, no surprises. Starter, Professional, and Enterprise tiers.",
+    alternates: { canonical: `${baseUrl}/pricing` },
+    openGraph: {
+      title: "Pricing — One-Time Website Pricing | Zymbiq",
+      description:
+        "Transparent, one-time pricing for production-ready websites. No subscriptions, no surprises.",
+      url: `${baseUrl}/pricing`,
+      type: "website",
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default async function PricingPage() {
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+
   const [pricingTiers, pricingFaqs] = await Promise.all([
     prisma.pricingTier.findMany({
       where: { isVisible: true },
@@ -49,7 +64,50 @@ export default async function PricingPage() {
     }),
   ]);
 
+  const pricingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Zymbiq Pricing Tiers",
+    url: `${baseUrl}/pricing`,
+    itemListElement: pricingTiers.map((tier, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "Offer",
+        name: tier.name,
+        price: tier.price.toFixed(2),
+        priceCurrency: "USD",
+        description: tier.features.join(", "),
+        url: `${baseUrl}/pricing`,
+      },
+    })),
+  };
+
+  const faqJsonLd =
+    pricingFaqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: pricingFaqs.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: { "@type": "Answer", text: faq.answer },
+          })),
+        }
+      : null;
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
+      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
     <main className="min-h-screen bg-background">
       {/* ------------------------------------------------------------------ */}
       {/* Header                                                              */}
@@ -143,6 +201,7 @@ export default async function PricingPage() {
         </section>
       )}
     </main>
+    </>
   );
 }
 

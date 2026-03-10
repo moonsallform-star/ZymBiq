@@ -6,6 +6,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatDate, truncate } from "@/lib/utils";
+import { getBaseUrl, getPlatformConfig, buildBlogPostingJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
 import BlogPostContent from "@/components/blog/blog-post-content";
 import BlogCard from "@/components/blog/blog-card";
 import { Badge } from "@/components/ui/badge";
@@ -53,27 +54,51 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug, isPublished: true },
-    select: {
-      title: true,
-      excerpt: true,
-      seoTitle: true,
-      seoDescription: true,
-      coverImageUrl: true,
-    },
-  });
+  const [post, baseUrl] = await Promise.all([
+    prisma.blogPost.findUnique({
+      where: { slug: params.slug, isPublished: true },
+      select: {
+        title: true,
+        excerpt: true,
+        seoTitle: true,
+        seoDescription: true,
+        coverImageUrl: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+    }),
+    getBaseUrl(),
+  ]);
 
   if (!post) {
     return { title: "Post Not Found" };
   }
 
+  const title = post.seoTitle ?? post.title;
+  const description = post.seoDescription ?? truncate(post.excerpt, 160);
+  const canonical = `${baseUrl}/blog/${params.slug}`;
+
   return {
-    title: post.seoTitle ?? post.title,
-    description: post.seoDescription ?? truncate(post.excerpt, 160),
-    openGraph: post.coverImageUrl
-      ? { images: [{ url: post.coverImageUrl }] }
-      : undefined,
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: "article",
+      ...(post.publishedAt && { publishedTime: post.publishedAt.toISOString() }),
+      modifiedTime: post.updatedAt.toISOString(),
+      ...(post.coverImageUrl && {
+        images: [{ url: post.coverImageUrl, width: 1200, height: 675, alt: title }],
+      }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(post.coverImageUrl && { images: [post.coverImageUrl] }),
+    },
   };
 }
 
@@ -86,38 +111,57 @@ export default async function BlogPostPage({
 }: {
   params: { slug: string };
 }) {
-  // Fetch post — isPublished: true ensures unpublished posts return notFound()
-  const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug, isPublished: true },
-    select: {
-      id: true,
-      title: true,
-      excerpt: true,
-      content: true,
-      coverImageUrl: true,
-      readTime: true,
-      publishedAt: true,
-      seoTitle: true,
-      seoDescription: true,
-    },
-  });
+  const [post, relatedPosts, baseUrl, platform] = await Promise.all([
+    prisma.blogPost.findUnique({
+      where: { slug: params.slug, isPublished: true },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        excerpt: true,
+        content: true,
+        coverImageUrl: true,
+        readTime: true,
+        publishedAt: true,
+        updatedAt: true,
+        seoTitle: true,
+        seoDescription: true,
+      },
+    }),
+    prisma.blogPost.findMany({
+      where: {
+        isPublished: true,
+        slug: { not: params.slug },
+      },
+      select: blogPostSummarySelect,
+      orderBy: { publishedAt: "desc" },
+      take: 3,
+    }),
+    getBaseUrl(),
+    getPlatformConfig(),
+  ]);
 
   if (!post) {
     notFound();
   }
 
-  // Fetch up to 3 related posts (most recent, excluding current)
-  const relatedPosts = await prisma.blogPost.findMany({
-    where: {
-      isPublished: true,
-      slug: { not: params.slug },
-    },
-    select: blogPostSummarySelect,
-    orderBy: { publishedAt: "desc" },
-    take: 3,
-  });
+  const blogJsonLd = buildBlogPostingJsonLd(post, baseUrl, platform.name || "Zymbiq");
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Home", url: baseUrl },
+    { name: "Blog", url: `${baseUrl}/blog` },
+    { name: post.seoTitle ?? post.title, url: `${baseUrl}/blog/${params.slug}` },
+  ]);
 
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
     <main className="py-16">
       <article className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -169,5 +213,6 @@ export default async function BlogPostPage({
         </section>
       )}
     </main>
+    </>
   );
 }

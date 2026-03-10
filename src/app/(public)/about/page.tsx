@@ -11,9 +11,23 @@ import { Button } from "@/components/ui/button";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "About — Zymbiq",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+  return {
+    title: "About — Solo Web Developer | Zymbiq",
+    description:
+      "One developer. Zero compromises. Learn about the philosophy behind Zymbiq — production-ready websites built with obsessive attention to detail.",
+    alternates: { canonical: `${baseUrl}/about` },
+    openGraph: {
+      title: "About — Solo Web Developer | Zymbiq",
+      description:
+        "One developer. Zero compromises. Production-ready websites built with obsessive attention to detail.",
+      url: `${baseUrl}/about`,
+      type: "website",
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -113,7 +127,31 @@ export default async function AboutPage() {
     .map((p) => p.trim())
     .filter(Boolean);
 
+ const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+
+  const personJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: platform.name || "Zymbiq",
+    url: baseUrl,
+    description: content.aboutText,
+    numberOfEmployees: { "@type": "QuantitativeValue", value: 1 },
+    knowsAbout: [
+      "Next.js",
+      "React",
+      "Web Development",
+      "TypeScript",
+      "Full Stack Development",
+    ],
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
     <main className="py-24">
       <div className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -193,7 +231,8 @@ export default async function AboutPage() {
           </Button>
         </section>
 
-      </div>
+     </div>
     </main>
+    </>
   );
 }

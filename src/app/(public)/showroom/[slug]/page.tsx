@@ -10,6 +10,7 @@ import Image from 'next/image';
 
 import { prisma } from '@/lib/prisma';
 import { truncate } from '@/lib/utils';
+import { getBaseUrl, getPlatformConfig, buildProductJsonLd, buildBreadcrumbJsonLd } from '@/lib/seo';
 import ProjectDetailPanel from '@/components/projects/project-detail-panel';
 import SimilarProjects from '@/components/projects/similar-projects';
 
@@ -45,27 +46,47 @@ export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
 // -----------------------------------------------------------------------------
 
 export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
-  const project = await prisma.project.findUnique({
-    where: { slug: params.slug },
-    select: {
-      title: true,
-      description: true,
-      thumbnailUrl: true,
-    },
-  });
+  const [project, baseUrl] = await Promise.all([
+    prisma.project.findUnique({
+      where: { slug: params.slug },
+      select: {
+        title: true,
+        description: true,
+        thumbnailUrl: true,
+        category: true,
+        price: true,
+        techStack: true,
+      },
+    }),
+    getBaseUrl(),
+  ]);
 
   if (!project) {
     return { title: 'Project Not Found' };
   }
 
   const description = truncate(project.description, 160);
+  const canonical = `${baseUrl}/showroom/${params.slug}`;
 
   return {
-    title: project.title,
+    title: `${project.title} — Buy Production-Ready Website`,
     description,
+    alternates: {
+      canonical,
+    },
+    keywords: [
+      project.title,
+      project.category,
+      ...project.techStack,
+      "buy website",
+      "production ready website",
+      "pre-built website",
+    ],
     openGraph: {
-      title: project.title,
+      title: `${project.title} — Buy Production-Ready Website`,
       description,
+      url: canonical,
+      type: "website",
       ...(project.thumbnailUrl && {
         images: [
           {
@@ -79,12 +100,13 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     },
     twitter: {
       card: 'summary_large_image',
-      title: project.title,
+      title: `${project.title} — Buy Production-Ready Website`,
       description,
       ...(project.thumbnailUrl && { images: [project.thumbnailUrl] }),
     },
   };
 }
+
 
 // -----------------------------------------------------------------------------
 // ViewTracker — tiny client component to fire analytics on mount
@@ -103,20 +125,58 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 // -----------------------------------------------------------------------------
 
 export default async function ProjectDetailPage({ params }: PageParams) {
-  // ── Fetch project ──────────────────────────────────────────────────────────
-  const project = await prisma.project.findUnique({
-    where: { slug: params.slug },
-    include: {
-      faqs: {
-        orderBy: { sortOrder: 'asc' },
+  // ── Fetch project + SEO data ───────────────────────────────────────────────
+  const [project, baseUrl, platform] = await Promise.all([
+    prisma.project.findUnique({
+      where: { slug: params.slug },
+      include: {
+        faqs: {
+          orderBy: { sortOrder: 'asc' },
+        },
       },
-    },
-  });
+    }),
+    getBaseUrl(),
+    getPlatformConfig(),
+  ]);
 
   // 404 for unknown or hidden projects
   if (!project || !project.isVisible) {
     notFound();
   }
+
+    // ── JSON-LD structured data ────────────────────────────────────────────────
+  const productJsonLd = buildProductJsonLd(
+    {
+      title: project.title,
+      description: project.description,
+      price: project.price,
+      thumbnailUrl: project.thumbnailUrl,
+      slug: project.slug,
+      qualityScore: project.qualityScore,
+      category: project.category,
+    },
+    baseUrl,
+    platform.name || "Zymbiq"
+  );
+
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Home", url: baseUrl },
+    { name: "Showroom", url: `${baseUrl}/showroom` },
+    { name: project.title, url: `${baseUrl}/showroom/${project.slug}` },
+  ]);
+
+  const faqJsonLd =
+    project.faqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: project.faqs.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: { "@type": "Answer", text: faq.answer },
+          })),
+        }
+      : null;
 
   // ── Non-blocking analytics event ─────────────────────────────────────────
   // Fire-and-forget: we intentionally do NOT await this so it never delays render.
@@ -136,6 +196,21 @@ export default async function ProjectDetailPage({ params }: PageParams) {
 
   // ── Layout ─────────────────────────────────────────────────────────────────
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
     <main className="min-h-screen bg-background">
       {/* ── Split panel ─────────────────────────────────────────────────── */}
       <section
@@ -226,5 +301,6 @@ export default async function ProjectDetailPage({ params }: PageParams) {
         />
       </div>
     </main>
+    </>
   );
 }

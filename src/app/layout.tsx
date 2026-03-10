@@ -273,6 +273,49 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXTAUTH_URL ?? "http://localhost:3000"
   ),
+  keywords: [
+    "production ready websites",
+    "pre-built websites",
+    "custom website development",
+    "buy website",
+    "web developer Bangladesh",
+    "Next.js website",
+    "React website for sale",
+    "SaaS website template",
+    "restaurant website",
+    "e-commerce website",
+  ],
+  authors: [{ name: "Zymbiq" }],
+  creator: "Zymbiq",
+  publisher: "Zymbiq",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Zymbiq",
+    title: "Zymbiq — Premium Websites",
+    description:
+      "Production-ready websites built by a solo developer. Browse pre-built projects or order a custom site.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Zymbiq — Premium Websites",
+    description:
+      "Production-ready websites built by a solo developer. Browse pre-built projects or order a custom site.",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
+  },
 };
 
 // =============================================================================

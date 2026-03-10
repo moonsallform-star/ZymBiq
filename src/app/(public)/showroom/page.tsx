@@ -13,11 +13,40 @@ import ShowroomClient from './_components/showroom-client';
 // Metadata
 // -----------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: 'Showroom — Browse Projects',
-  description:
-    'Browse production-ready websites available for instant purchase. Filter by category, tech stack, and price.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+  return {
+    title: "Showroom — Production-Ready Websites for Sale | Zymbiq",
+    description:
+      "Browse pre-built, production-ready websites. Restaurant, e-commerce, portfolio, SaaS and more — instant GitHub access and deployment assistance included.",
+    alternates: { canonical: `${baseUrl}/showroom` },
+    keywords: [
+      "buy website",
+      "pre-built website",
+      "production ready website",
+      "website for sale",
+      "Next.js website",
+      "React website template",
+      "SaaS website",
+      "restaurant website",
+      "e-commerce website template",
+    ],
+    openGraph: {
+      title: "Showroom — Production-Ready Websites for Sale | Zymbiq",
+      description:
+        "Browse pre-built, production-ready websites. Instant GitHub access and deployment assistance included.",
+      url: `${baseUrl}/showroom`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Showroom — Production-Ready Websites for Sale | Zymbiq",
+      description:
+        "Browse pre-built, production-ready websites. Instant GitHub access and deployment assistance included.",
+    },
+  };
+}
 
 // -----------------------------------------------------------------------------
 // ISR — revalidate every 5 minutes
@@ -77,7 +106,43 @@ export default async function ShowroomPage() {
     // Use defaults — no action needed.
   }
 
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Showroom — Production-Ready Websites",
+    description:
+      "Pre-built, production-ready websites available for instant purchase.",
+    url: `${baseUrl}/showroom`,
+    numberOfItems: totalCount,
+    publisher: {
+      "@type": "Organization",
+      name: "Zymbiq",
+      url: baseUrl,
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+      { "@type": "ListItem", position: 2, name: "Showroom", item: `${baseUrl}/showroom` },
+    ],
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
     <main className="min-h-screen bg-background">
       {/* ------------------------------------------------------------------ */}
       {/* Page header                                                         */}
@@ -110,7 +175,8 @@ export default async function ShowroomPage() {
           <ShowroomClient initialProjects={initialProjects} />
         </Suspense>
       </section>
-    </main>
+</main>
+    </>
   );
 }
 

@@ -119,14 +119,26 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     siteConfig.content.heroSubheadline ||
     DEFAULT_SITE_CONFIG.content.heroSubheadline;
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
 
   return {
-    title: `${platformName} — Premium Websites`,
+    title: `${platformName} — Premium Production-Ready Websites`,
     description,
+    alternates: {
+      canonical: baseUrl,
+    },
     openGraph: {
-      title: `${platformName} — Premium Websites`,
+      title: `${platformName} — Premium Production-Ready Websites`,
       description,
-      type: 'website',
+      type: "website",
+      url: baseUrl,
+      siteName: platformName,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${platformName} — Premium Production-Ready Websites`,
+      description,
     },
   };
 }
@@ -233,7 +245,51 @@ export default async function HomePage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+   const baseUrl =
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com";
+
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteConfig.platform.name || "Zymbiq",
+    url: baseUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${baseUrl}/showroom?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: siteConfig.platform.name || "Zymbiq",
+    url: baseUrl,
+    description:
+      siteConfig.content.heroSubheadline ||
+      DEFAULT_SITE_CONFIG.content.heroSubheadline,
+    ...(siteConfig.platform.supportEmail && {
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: siteConfig.platform.supportEmail,
+      },
+    }),
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
     <div className="flex flex-col min-h-screen">
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       {layout.heroEnabled && (
@@ -274,5 +330,6 @@ export default async function HomePage() {
         </div>
       ))}
     </div>
+    </>
   );
 }
