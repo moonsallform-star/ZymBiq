@@ -442,7 +442,7 @@ export default function AppearanceEditor() {
   // ---------------------------------------------------------------------------
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-0 h-full">
+    <form onSubmit={onSubmit} className="flex flex-col gap-0" style={{ height: 'calc(100vh - 3.5rem)' }}>
       {/* Top action bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface sticky top-0 z-10">
         <div>
@@ -478,11 +478,11 @@ export default function AppearanceEditor() {
       </div>
 
       {/* Split layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ------------------------------------------------------------------ */}
         {/* Left panel — controls                                               */}
         {/* ------------------------------------------------------------------ */}
-        <div className="w-full lg:w-[420px] xl:w-[480px] flex-shrink-0 overflow-y-auto border-r border-border">
+        <div className="w-full lg:w-[420px] xl:w-[480px] flex-shrink-0 overflow-y-auto min-h-0 border-r border-border">
           <div className="divide-y divide-border">
 
             {/* ---- Colors ---- */}
@@ -732,7 +732,7 @@ export default function AppearanceEditor() {
         {/* ------------------------------------------------------------------ */}
         {/* Right panel — live preview iframe                                   */}
         {/* ------------------------------------------------------------------ */}
-        <div className="hidden lg:flex flex-1 flex-col bg-muted/5">
+        <div className="hidden lg:flex flex-1 flex-col min-h-0 bg-muted/5">
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface">
             <Eye className="h-3.5 w-3.5 text-muted" />
             <span className="text-xs text-muted font-medium">Live Preview</span>

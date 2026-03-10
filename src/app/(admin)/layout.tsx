@@ -281,7 +281,7 @@ export default async function AdminLayout({
           adminEmail={session.user.email}
         />
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 3.5rem)' }}>
           <RealtimeProvider>{children}</RealtimeProvider>
         </main>
       </div>
