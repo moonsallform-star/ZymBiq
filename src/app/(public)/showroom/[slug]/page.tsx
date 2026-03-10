@@ -211,7 +211,7 @@ export default async function ProjectDetailPage({ params }: PageParams) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
-    <main className="min-h-screen bg-background">
+   <main className="min-h-screen">
       {/* ── Split panel ─────────────────────────────────────────────────── */}
       <section
         aria-label={`${project.title} — project detail`}

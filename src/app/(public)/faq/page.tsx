@@ -57,7 +57,7 @@ export default async function FaqPage() {
     }));
 
   return (
-    <main className="min-h-screen bg-background">
+   <main className="min-h-screen">
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <section className="border-b border-border py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

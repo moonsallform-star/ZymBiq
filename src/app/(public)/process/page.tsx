@@ -137,7 +137,7 @@ export default async function ProcessPage() {
   }));
 
   return (
-    <main className="min-h-screen bg-background">
+   <main className="min-h-screen">
       {/* ------------------------------------------------------------------ */}
       {/* Page header                                                          */}
       {/* ------------------------------------------------------------------ */}

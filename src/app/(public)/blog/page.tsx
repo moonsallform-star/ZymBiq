@@ -77,7 +77,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const hasNext = page * PAGE_SIZE < total;
 
   return (
-    <main className="min-h-screen bg-background">
+   <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
         {/* Page heading */}

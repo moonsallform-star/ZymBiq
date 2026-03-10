@@ -143,7 +143,7 @@ export default async function ShowroomPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-    <main className="min-h-screen bg-background">
+   <main className="min-h-screen">
       {/* ------------------------------------------------------------------ */}
       {/* Page header                                                         */}
       {/* ------------------------------------------------------------------ */}
