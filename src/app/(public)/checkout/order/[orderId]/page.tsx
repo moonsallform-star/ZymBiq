@@ -101,30 +101,68 @@ export default async function CustomOrderCheckoutPage({ params }: CustomCheckout
 
   if (stripeEnabled && hasAnyPaymentMethod) {
     try {
-      if (order.paymentIntentId) {
+       if (order.paymentIntentId) {
         const existing = await stripe.paymentIntents.retrieve(order.paymentIntentId);
+
+        // Payment already succeeded on Stripe side — force DB update and redirect.
+        // This handles the case where the webhook was delayed or missed.
+        if (existing.status === "succeeded") {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { paymentStatus: "PAID", status: "IN_DISCUSSION" },
+          });
+          redirect(`/track/${order.trackingCode}`);
+        }
+
+        // Payment was cancelled or failed — clear the old intent so a fresh
+        // one gets created below, allowing the user to retry.
         if (
-          existing.status === "requires_payment_method" ||
-          existing.status === "requires_confirmation" ||
-          existing.status === "requires_action"
+          existing.status === "canceled" ||
+          existing.status === "requires_payment_method"
         ) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { paymentIntentId: null },
+          });
+        } else if (
+          existing.status === "requires_confirmation" ||
+          existing.status === "requires_action" ||
+          existing.status === "processing"
+        ) {
+          // Still in-flight — reuse the existing intent
           stripeClientSecret = existing.client_secret ?? null;
         }
+        // Any other status (requires_capture etc.) falls through to create new
       }
 
       if (!stripeClientSecret) {
-        const intent = await createPaymentIntent(amountUsd, {
-          orderId: order.id,
-          userId: session.user.id,
-          orderType: "CUSTOM",
+        // Only create a new PaymentIntent if we don't already have a valid one
+        const freshOrder = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { paymentIntentId: true },
         });
-        stripeClientSecret = intent.client_secret ?? null;
 
-        if (intent.id) {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { paymentIntentId: intent.id, amountUsd },
+        // Double-check no intent was just set by a concurrent request
+        if (!freshOrder?.paymentIntentId) {
+          const intent = await createPaymentIntent(amountUsd, {
+            orderId: order.id,
+            userId: session.user.id,
+            orderType: "CUSTOM",
           });
+          stripeClientSecret = intent.client_secret ?? null;
+
+          if (intent.id) {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { paymentIntentId: intent.id, amountUsd },
+            });
+          }
+        } else {
+          // A concurrent request just created one — retrieve and use it
+          const concurrent = await stripe.paymentIntents.retrieve(freshOrder.paymentIntentId);
+          if (concurrent.status !== "succeeded" && concurrent.status !== "canceled") {
+            stripeClientSecret = concurrent.client_secret ?? null;
+          }
         }
       }
     } catch (err) {

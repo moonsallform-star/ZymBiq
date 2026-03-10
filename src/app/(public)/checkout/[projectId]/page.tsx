@@ -162,12 +162,35 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
         // Reuse existing intent if the order already has one
         if (order.paymentIntentId) {
           const existing = await stripe.paymentIntents.retrieve(order.paymentIntentId);
+
+          // Payment already succeeded — fix DB and redirect immediately.
+          // Handles webhook delay or missed webhook gracefully.
+          if (existing.status === "succeeded") {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { paymentStatus: "PAID", status: "IN_DISCUSSION" },
+            });
+            redirect(`/track/${order.trackingCode}`);
+          }
+
+          // Intent is still usable — reuse it
           if (
-            existing.status === "requires_payment_method" ||
             existing.status === "requires_confirmation" ||
-            existing.status === "requires_action"
+            existing.status === "requires_action" ||
+            existing.status === "processing"
           ) {
             stripeClientSecret = existing.client_secret ?? null;
+          }
+
+          // Intent failed or was cancelled — clear it so a fresh one is created
+          if (
+            existing.status === "canceled" ||
+            existing.status === "requires_payment_method"
+          ) {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { paymentIntentId: null },
+            });
           }
         }
 
