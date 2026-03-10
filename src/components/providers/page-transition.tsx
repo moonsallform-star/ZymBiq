@@ -19,17 +19,24 @@ export default function PageTransition({
   const pathname = usePathname();
 
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 0, x: 10 }}
         animate={{
           opacity: 1,
-          transition: { duration: 0.18, ease: 'easeOut' },
+          x: 0,
+          transition: {
+            duration: 0.15,
+            ease: [0, 0, 0.2, 1],
+          },
         }}
         exit={{
           opacity: 0,
-          transition: { duration: 0.12, ease: 'easeIn' },
+          transition: {
+            duration: 0.08,
+            ease: 'easeIn',
+          },
         }}
       >
         {children}
