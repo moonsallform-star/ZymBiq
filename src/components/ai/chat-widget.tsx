@@ -127,23 +127,26 @@ export default function ChatWidget() {
   // Thread ID resolution
   // --------------------------------------------------------------------------
 
-  const [threadId, setThreadId] = useState<string>(() => {
-    // Try to restore from localStorage first
-    const stored = getStoredThreadId();
-    if (stored) return stored;
+  // Initialise threadId lazily — the localStorage read is deferred until after
+  // hydration to avoid blocking the first render pass and prevent SSR/client
+  // mismatch warnings. We start with an empty string and populate in useEffect.
+  const [threadId, setThreadId] = useState<string>('');
 
-    // If logged in, use a user-prefixed thread
+  useEffect(() => {
+    if (threadId) return; // already set
+    const stored = getStoredThreadId();
+    if (stored) { setThreadId(stored); return; }
     if (session?.user?.id) {
       const prefixed = `user-${session.user.id}`;
       storeThreadId(prefixed);
-      return prefixed;
+      setThreadId(prefixed);
+      return;
     }
-
-    // Generate a new anonymous thread ID
     const fresh = generateUUID();
     storeThreadId(fresh);
-    return fresh;
-  });
+    setThreadId(fresh);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // When session arrives (async), upgrade anonymous thread to user-prefixed
   useEffect(() => {

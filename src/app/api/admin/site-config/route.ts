@@ -39,6 +39,11 @@ function sanitiseValue(key: string, parsed: unknown): unknown {
 // Sensitive fields are stripped before the response is sent.
 // ---------------------------------------------------------------------------
 
+// Cache the config response for 5 minutes at the CDN/edge level.
+// The PATCH handler calls revalidatePath('/') on writes, so the cache
+// is invalidated immediately when an admin saves changes.
+export const revalidate = 300;
+
 export async function GET(): Promise<NextResponse> {
   noStore();
   try {
@@ -61,8 +66,7 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json({ data: configMap }, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'Pragma': 'no-cache',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
       },
     });
   } catch (error) {

@@ -14,8 +14,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 // ChatWidget is a heavy client component — load it only when needed.
+// IMPORTANT: This must stay at module level. If placed inside the component
+// body, Next.js re-evaluates the dynamic() call on every render, defeating
+// code-splitting and causing the chunk to reload unnecessarily.
 const ChatWidget = dynamic(
-  () => import('@/components/ai/chat-widget').then((m) => m.default),
+  () => import('@/components/ai/chat-widget'),
   { ssr: false },
 );
 

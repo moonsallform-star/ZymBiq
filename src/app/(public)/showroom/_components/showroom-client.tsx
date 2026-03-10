@@ -139,7 +139,11 @@ function CategoryChips() {
   );
 }
 
-export default function ShowroomClient() {
+interface ShowroomClientProps {
+  initialProjects?: ProjectWithFaqs[];
+}
+
+export default function ShowroomClient({ initialProjects }: ShowroomClientProps) {
   // AI search results — null means "not in AI mode", use paginated API instead
   const [aiResults, setAiResults] = useState<ProjectWithFaqs[] | null>(null);
 
@@ -217,7 +221,7 @@ export default function ShowroomClient() {
           ))}
         </div>
       }>
-        <ProjectGrid onAiResults={aiResults} />
+        <ProjectGrid onAiResults={aiResults} initialProjects={initialProjects} />
       </React.Suspense>
     </div>
   );

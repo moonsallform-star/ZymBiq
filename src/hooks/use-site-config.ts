@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   QUERY_KEYS,
@@ -148,9 +148,9 @@ export function useSiteConfig(): {
   const { data, isLoading, error } = useQuery<ParsedSiteConfig, Error>({
     queryKey: QUERY_KEYS.siteConfig(),
     queryFn: fetchSiteConfig,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
-    retry: 2,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -163,18 +163,23 @@ export function useSiteConfig(): {
     }
   }, [data, setAnimationIntensity, setSiteConfigLoaded]);
 
-  // Always return a fully-resolved ParsedSiteConfig — callers never need to
-  // handle undefined. Fall back to DEFAULT_SITE_CONFIG on loading or error.
-  const resolved: ParsedSiteConfig = data ?? {
-    appearance: DEFAULT_SITE_CONFIG.appearance as SiteConfigAppearance,
-    layout: DEFAULT_SITE_CONFIG.layout as unknown as SiteConfigLayout,
-    content: DEFAULT_SITE_CONFIG.content as unknown as SiteConfigContent,
-    ai: DEFAULT_SITE_CONFIG.ai as unknown as SiteConfigAI,
-    communication: DEFAULT_SITE_CONFIG.communication as SiteConfigCommunication,
-    payments: DEFAULT_SITE_CONFIG.payments as SiteConfigPayments,
-    platform: DEFAULT_SITE_CONFIG.platform as unknown as SiteConfigPlatform,
-    devforge: DEFAULT_SITE_CONFIG.devforge as SiteConfigDevforge,
-  };
+  // Memoize the resolved config — prevents consumers from re-rendering when
+  // parent components re-render but the site config data hasn't changed.
+  // The fallback object is also memoized so it's referentially stable.
+  const resolved = useMemo<ParsedSiteConfig>(
+    () =>
+      data ?? {
+        appearance: DEFAULT_SITE_CONFIG.appearance as SiteConfigAppearance,
+        layout: DEFAULT_SITE_CONFIG.layout as unknown as SiteConfigLayout,
+        content: DEFAULT_SITE_CONFIG.content as unknown as SiteConfigContent,
+        ai: DEFAULT_SITE_CONFIG.ai as unknown as SiteConfigAI,
+        communication: DEFAULT_SITE_CONFIG.communication as SiteConfigCommunication,
+        payments: DEFAULT_SITE_CONFIG.payments as SiteConfigPayments,
+        platform: DEFAULT_SITE_CONFIG.platform as unknown as SiteConfigPlatform,
+        devforge: DEFAULT_SITE_CONFIG.devforge as SiteConfigDevforge,
+      },
+    [data],
+  );
 
   return {
     data: resolved,

@@ -74,23 +74,112 @@ function buildApiParams(
 interface ProjectGridProps {
   /** Replaces paginated results with AI search results when provided */
   onAiResults?: ProjectWithFaqs[] | null;
+  /** Server-prefetched first page — eliminates the initial client fetch waterfall */
+  initialProjects?: ProjectWithFaqs[];
 }
 
 // -----------------------------------------------------------------------------
 // Component
 // -----------------------------------------------------------------------------
 
-export default function ProjectGrid({ onAiResults }: ProjectGridProps) {
+// -----------------------------------------------------------------------------
+// ComparisonBar — reads Zustand independently so the main grid never re-renders
+// when the user ticks/unticks a comparison checkbox.
+// -----------------------------------------------------------------------------
+
+const ComparisonBar = React.memo(function ComparisonBar() {
+  const comparisonProjects   = useStore((s) => s.comparisonProjects);
+  const removeFromComparison = useStore((s) => s.removeFromComparison);
+  const clearComparison      = useStore((s) => s.clearComparison);
+  const [compareOpen, setCompareOpen] = React.useState(false);
+
+  if (comparisonProjects.length === 0) return null;
+
+  return (
+    <>
+      <div
+        className={[
+          'fixed bottom-0 left-0 right-0 z-40',
+          'bg-surface/95 backdrop-blur-md',
+          'border-t border-border',
+          'px-4 py-3',
+          'flex items-center gap-3',
+          'pb-[calc(0.75rem+60px)] md:pb-3',
+        ].join(' ')}
+        role="region"
+        aria-label="Project comparison"
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {comparisonProjects.map((p) => (
+            <div key={p.id} className="relative flex-shrink-0 group">
+              <div className="h-10 w-16 rounded border border-border bg-muted/10 overflow-hidden">
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-xs font-medium text-muted truncate px-1 text-center leading-tight">
+                    {p.title.length > 10 ? p.title.slice(0, 10) + '…' : p.title}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => removeFromComparison(p.id)}
+                className={[
+                  'absolute -top-1.5 -right-1.5',
+                  'h-4 w-4 rounded-full',
+                  'bg-foreground text-background',
+                  'flex items-center justify-center',
+                  'opacity-0 group-hover:opacity-100',
+                  'transition-opacity duration-150',
+                  'focus-visible:opacity-100',
+                  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                ].join(' ')}
+                aria-label={`Remove ${p.title} from comparison`}
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          ))}
+          {Array.from({ length: 3 - comparisonProjects.length }).map((_, i) => (
+            <div
+              key={`empty-${i}`}
+              className="h-10 w-16 rounded border border-dashed border-border bg-transparent flex-shrink-0"
+              aria-hidden="true"
+            />
+          ))}
+          <span className="hidden sm:block text-sm text-muted ml-1 truncate">
+            {comparisonProjects.length} of 3 selected
+          </span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="ghost" size="sm" className="text-muted hover:text-foreground" onClick={clearComparison}>
+            Clear
+          </Button>
+          <Button
+            variant="default" size="sm" className="gap-1.5"
+            onClick={() => setCompareOpen(true)}
+            disabled={comparisonProjects.length < 2}
+            aria-label="Open comparison view"
+          >
+            <GitCompareArrows className="h-4 w-4" />
+            Compare
+          </Button>
+        </div>
+      </div>
+      {compareOpen && (
+        <React.Suspense fallback={null}>
+          <ProjectComparison open={compareOpen} onClose={() => setCompareOpen(false)} />
+        </React.Suspense>
+      )}
+    </>
+  );
+});
+
+// -----------------------------------------------------------------------------
+// ProjectGrid
+// -----------------------------------------------------------------------------
+
+export default function ProjectGrid({ onAiResults, initialProjects }: ProjectGridProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // ── Comparison state ───────────────────────────────────────────────────────
-  const comparisonProjects  = useStore((s) => s.comparisonProjects);
-  const removeFromComparison = useStore((s) => s.removeFromComparison);
-  const clearComparison      = useStore((s) => s.clearComparison);
-
-  const [compareOpen, setCompareOpen] = React.useState(false);
 
   // ── Infinite query ─────────────────────────────────────────────────────────
   // Build a stable filter key from the URL params for cache busting
@@ -112,7 +201,13 @@ export default function ProjectGrid({ onAiResults }: ProjectGridProps) {
       const json = await res.json();
       return json as PaginatedResponse<ProjectWithFaqs>;
     },
-    initialPageParam: undefined,
+     initialPageParam: undefined,
+    initialData: initialProjects && initialProjects.length > 0
+      ? {
+          pages: [{ data: initialProjects, hasMore: initialProjects.length === 12, nextCursor: undefined, total: initialProjects.length }],
+          pageParams: [undefined],
+        }
+      : undefined,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
     staleTime: 60 * 1000,
@@ -241,110 +336,10 @@ export default function ProjectGrid({ onAiResults }: ProjectGridProps) {
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Floating comparison bar                                             */}
+      {/* Floating comparison bar + dialog — isolated component so grid      */}
+      {/* never re-renders when comparison state changes                     */}
       {/* ------------------------------------------------------------------ */}
-      {comparisonProjects.length > 0 && (
-        <div
-          className={[
-            'fixed bottom-0 left-0 right-0 z-40',
-            'bg-surface/95 backdrop-blur-md',
-            'border-t border-border',
-            'px-4 py-3',
-            'flex items-center gap-3',
-            // On mobile, sit above the 60px bottom nav
-            'pb-[calc(0.75rem+60px)] md:pb-3',
-          ].join(' ')}
-          role="region"
-          aria-label="Project comparison"
-        >
-          {/* Selected project thumbnails */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {comparisonProjects.map((p) => (
-              <div
-                key={p.id}
-                className="relative flex-shrink-0 group"
-              >
-                <div className="h-10 w-16 rounded border border-border bg-muted/10 overflow-hidden">
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-muted truncate px-1 text-center leading-tight">
-                      {p.title.length > 10
-                        ? p.title.slice(0, 10) + '…'
-                        : p.title}
-                    </span>
-                  </div>
-                </div>
-                {/* Remove button */}
-                <button
-                  onClick={() => removeFromComparison(p.id)}
-                  className={[
-                    'absolute -top-1.5 -right-1.5',
-                    'h-4 w-4 rounded-full',
-                    'bg-foreground text-background',
-                    'flex items-center justify-center',
-                    'opacity-0 group-hover:opacity-100',
-                    'transition-opacity duration-150',
-                    'focus-visible:opacity-100',
-                    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
-                  ].join(' ')}
-                  aria-label={`Remove ${p.title} from comparison`}
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </div>
-            ))}
-
-            {/* Empty slots */}
-            {Array.from({ length: 3 - comparisonProjects.length }).map(
-              (_, i) => (
-                <div
-                  key={`empty-${i}`}
-                  className="h-10 w-16 rounded border border-dashed border-border bg-transparent flex-shrink-0"
-                  aria-hidden="true"
-                />
-              ),
-            )}
-
-            <span className="hidden sm:block text-sm text-muted ml-1 truncate">
-              {comparisonProjects.length} of 3 selected
-            </span>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted hover:text-foreground"
-              onClick={clearComparison}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setCompareOpen(true)}
-              disabled={comparisonProjects.length < 2}
-              aria-label="Open comparison view"
-            >
-              <GitCompareArrows className="h-4 w-4" />
-              Compare
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Comparison dialog (lazy-loaded)                                     */}
-      {/* ------------------------------------------------------------------ */}
-      {compareOpen && (
-        <React.Suspense fallback={null}>
-          <ProjectComparison
-            open={compareOpen}
-            onClose={() => setCompareOpen(false)}
-          />
-        </React.Suspense>
-      )}
+      <ComparisonBar />
     </>
   );
 }

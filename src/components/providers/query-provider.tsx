@@ -35,15 +35,16 @@ export function createQueryClient(): QueryClient {
         // any query that forgets to set its own staleTime still gets a reasonable
         // cache window and does not hammer the server on every re-render.
         // -----------------------------------------------------------------------
-        staleTime: Math.min(
-          SITE_CONFIG_STALE_TIME_MS,
-          PROJECT_STALE_TIME_MS,
-          ORDER_STALE_TIME_MS,
-          BLOG_STALE_TIME_MS,
-        ),
+        // 60 s is a safe global floor; individual hooks override with their own
+        // stale times (SITE_CONFIG = 5 min, PROJECT / BLOG = 2 min, ORDER = 30 s).
+        // Using Math.min across all constants was wrong — it would have made every
+        // query as short-lived as the shortest constant (orders), causing excessive
+        // server round-trips for slow-changing data like site config.
+        staleTime: 60_000,
 
-        // Retry twice before surfacing an error to the UI.
-        retry: 2,
+        // Retry once before surfacing an error — retrying twice adds up to 3 s of
+        // exponential backoff delay on slow connections before the UI shows anything.
+        retry: 1,
 
         // Do not refetch on window focus — all real-time updates come through
         // Supabase Realtime or explicit invalidations triggered by mutations.

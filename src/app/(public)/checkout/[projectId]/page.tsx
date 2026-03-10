@@ -65,29 +65,33 @@ async function findOrCreateOrder(
   projectId: string,
   amountUsd: number
 ): Promise<{ id: string; trackingCode: string; paymentIntentId: string | null }> {
-  const existing = await prisma.order.findFirst({
-    where: {
-      userId,
-      projectId,
-      paymentStatus: { in: ["PENDING", "PENDING_MANUAL_VERIFICATION"] },
-    },
-    select: { id: true, trackingCode: true, paymentIntentId: true },
-    orderBy: { createdAt: "desc" },
-  });
+  // Run inside a serializable transaction to prevent duplicate orders being
+  // created if the user double-submits or opens two tabs simultaneously.
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.order.findFirst({
+      where: {
+        userId,
+        projectId,
+        paymentStatus: { in: ["PENDING", "PENDING_MANUAL_VERIFICATION"] },
+      },
+      select: { id: true, trackingCode: true, paymentIntentId: true },
+      orderBy: { createdAt: "desc" },
+    });
 
-  if (existing) return existing;
+    if (existing) return existing;
 
-  return prisma.order.create({
-    data: {
-      userId,
-      projectId,
-      orderType: "PREBUILT",
-      paymentMethod: "STRIPE",
-      status: "NEW",
-      paymentStatus: "PENDING",
-      amountUsd,
-    },
-    select: { id: true, trackingCode: true, paymentIntentId: true },
+    return tx.order.create({
+      data: {
+        userId,
+        projectId,
+        orderType: "PREBUILT",
+        paymentMethod: "STRIPE",
+        status: "NEW",
+        paymentStatus: "PENDING",
+        amountUsd,
+      },
+      select: { id: true, trackingCode: true, paymentIntentId: true },
+    });
   });
 }
 

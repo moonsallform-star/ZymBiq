@@ -155,6 +155,8 @@ function CardItem({
         <img
           src={project.thumbnailUrl}
           alt={project.title}
+          loading={slotOffset === 0 ? 'eager' : 'lazy'}
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
           draggable={false}
         />

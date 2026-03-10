@@ -292,13 +292,16 @@ function ParticleMeshCanvas() {
   // Read accent colour from CSS custom property once on mount
   const accentColor = useMemo(() => getCssVar('--zymbiq-accent'), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mouse move handler — normalise to [-1, 1] and request a render frame
+  // Mouse move handler — normalise to [-1, 1] and request a render frame.
+  // The delta threshold (0.004) prevents micro-movements from constantly
+  // marking the canvas dirty and triggering unnecessary R3F render passes.
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    mouseRef.current = {
-      x: (e.clientX / window.innerWidth) * 2 - 1,
-      y: -((e.clientY / window.innerHeight) * 2 - 1),
-    };
-    // invalidateRef populated by the inner FrameInvalidator component
+    const newX = (e.clientX / window.innerWidth) * 2 - 1;
+    const newY = -((e.clientY / window.innerHeight) * 2 - 1);
+    const dx = newX - mouseRef.current.x;
+    const dy = newY - mouseRef.current.y;
+    if (Math.abs(dx) < 0.004 && Math.abs(dy) < 0.004) return;
+    mouseRef.current = { x: newX, y: newY };
     invalidateRef.current?.();
   }, []);
 
@@ -313,7 +316,7 @@ function ParticleMeshCanvas() {
     <Canvas
       style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%' }}
       gl={{ antialias: false, alpha: true }}
-      frameloop="always"
+      frameloop="demand"
       camera={{ position: [0, 0, 5], fov: 75 }}
     >
       {/* Captures the invalidate function so the mouse handler can call it */}

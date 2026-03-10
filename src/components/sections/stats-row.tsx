@@ -36,15 +36,6 @@ interface StatCard {
 // -----------------------------------------------------------------------------
 
 async function fetchStats(): Promise<StatsApiResponse['data']> {
-  const [projectsRes, ordersRes] = await Promise.all([
-    fetch('/api/projects?limit=100&fields=fileCount', {
-      next: { revalidate: 60 },
-    }),
-    fetch('/api/orders?status=DELIVERED&limit=200', {
-      next: { revalidate: 60 },
-    }),
-  ]);
-
   const fallback = {
     deliveredOrders: 0,
     totalFiles: 0,
@@ -53,33 +44,25 @@ async function fetchStats(): Promise<StatsApiResponse['data']> {
   };
 
   try {
-    const [projectsJson, ordersJson] = await Promise.all([
-      projectsRes.ok ? projectsRes.json() : Promise.resolve({ data: [] }),
-      ordersRes.ok ? ordersRes.json() : Promise.resolve({ data: [] }),
-    ]);
+    // Single endpoint — avoids two separate DB round-trips and two separate
+    // fetch connections. The /api/stats route should aggregate all numbers
+    // in one DB query and cache aggressively (revalidate: 3600).
+    const res = await fetch('/api/stats', {
+      next: { revalidate: 3600 },
+    });
 
-    const projects = Array.isArray(projectsJson?.data)
-      ? (projectsJson.data as Array<{ fileCount?: number }>)
-      : [];
+    if (!res.ok) return fallback;
 
-    const orders = Array.isArray(ordersJson?.data)
-      ? (ordersJson.data as Array<{ userId?: string | null }>)
-      : [];
+    const json = await res.json();
+    const d = json?.data;
 
-    const totalFiles = projects.reduce(
-      (sum, p) => sum + (typeof p.fileCount === 'number' ? p.fileCount : 0),
-      0,
-    );
-
-    const uniqueUserIds = new Set(
-      orders.filter((o) => o.userId != null).map((o) => o.userId as string),
-    );
+    if (!d) return fallback;
 
     return {
-      deliveredOrders: orders.length,
-      totalFiles,
-      happyClients: uniqueUserIds.size,
-      avgBuildTimeDays: orders.length > 0 ? 7 : 0,
+      deliveredOrders: typeof d.deliveredOrders === 'number' ? d.deliveredOrders : 0,
+      totalFiles:      typeof d.totalFiles      === 'number' ? d.totalFiles      : 0,
+      happyClients:    typeof d.happyClients     === 'number' ? d.happyClients    : 0,
+      avgBuildTimeDays: typeof d.avgBuildTimeDays === 'number' ? d.avgBuildTimeDays : 7,
     };
   } catch {
     return fallback;
@@ -228,9 +211,9 @@ export default function StatsRow() {
   const isInView = useInView(sectionRef, { once: true, margin: '-80px' });
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: QUERY_KEYS.stats ? QUERY_KEYS.stats() : ['stats'],
+    queryKey: ['stats'],
     queryFn: fetchStats,
-    staleTime: 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour — matches server revalidate: 3600
     retry: 1,
     refetchOnWindowFocus: false,
   });

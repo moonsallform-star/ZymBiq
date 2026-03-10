@@ -132,6 +132,84 @@ const BORDER_RADIUS_MAP: Record<string, string> = {
 };
 
 // =============================================================================
+// Module-level CSS cache — keyed by a hash of the appearance values that
+// affect the output. Avoids rebuilding identical CSS strings on every request
+// when SiteConfig hasn't changed (common during ISR warm cache hits).
+// =============================================================================
+
+const _cssCache = new Map<string, { lightVars: string; darkVars: string; headingFont: string; bodyFont: string }>();
+
+function buildCssVars(appearance: SiteConfigAppearance) {
+  const cacheKey = [
+    appearance.primaryColor, appearance.secondaryColor, appearance.accentColor,
+    appearance.backgroundColor, appearance.textColor, appearance.mutedColor,
+    appearance.borderRadius, appearance.headingFont, appearance.bodyFont,
+  ].join('|');
+
+  if (_cssCache.has(cacheKey)) return _cssCache.get(cacheKey)!;
+
+  const headingFontFamily = FONT_NAME_TO_VAR[appearance.headingFont] ?? FONT_NAME_TO_VAR["Inter"];
+  const bodyFontFamily    = FONT_NAME_TO_VAR[appearance.bodyFont]    ?? FONT_NAME_TO_VAR["Inter"];
+  const borderRadiusValue = BORDER_RADIUS_MAP[appearance.borderRadius] ?? BORDER_RADIUS_MAP["soft"];
+
+  const lightVars = `
+    --zymbiq-primary: ${appearance.primaryColor};
+    --zymbiq-secondary: ${appearance.secondaryColor};
+    --zymbiq-accent: ${appearance.accentColor};
+    --zymbiq-bg: ${appearance.backgroundColor};
+    --zymbiq-surface: #FFFFFF;
+    --zymbiq-border: #E5E7EB;
+    --zymbiq-text: ${appearance.textColor};
+    --zymbiq-muted: ${appearance.mutedColor};
+    --zymbiq-text-inverse: #FFFFFF;
+    --zymbiq-radius: ${borderRadiusValue};
+    --font-heading: ${headingFontFamily};
+    --font-body: ${bodyFontFamily};
+    --background: ${appearance.backgroundColor};
+    --foreground: ${appearance.textColor};
+    --card: #FFFFFF;
+    --card-foreground: ${appearance.textColor};
+    --popover: #FFFFFF;
+    --popover-foreground: ${appearance.textColor};
+    --border: #E5E7EB;
+    --input: #E5E7EB;
+    --ring: ${appearance.accentColor};
+    --muted: #F3F4F6;
+    --muted-foreground: ${appearance.mutedColor};
+  `;
+
+  const darkVars = `
+    --zymbiq-primary: #F9FAFB;
+    --zymbiq-secondary: #D1D5DB;
+    --zymbiq-accent: #818CF8;
+    --zymbiq-bg: #0A0A0A;
+    --zymbiq-surface: #111827;
+    --zymbiq-border: #374151;
+    --zymbiq-text: #F9FAFB;
+    --zymbiq-muted: #9CA3AF;
+    --zymbiq-text-inverse: #111827;
+    --font-heading: ${headingFontFamily};
+    --font-body: ${bodyFontFamily};
+    --zymbiq-radius: ${borderRadiusValue};
+    --background: #0A0A0A;
+    --foreground: #F9FAFB;
+    --card: #111827;
+    --card-foreground: #F9FAFB;
+    --popover: #111827;
+    --popover-foreground: #F9FAFB;
+    --border: #374151;
+    --input: #374151;
+    --ring: #818CF8;
+    --muted: #1F2937;
+    --muted-foreground: #9CA3AF;
+  `;
+
+  const result = { lightVars, darkVars, headingFont: headingFontFamily, bodyFont: bodyFontFamily };
+  _cssCache.set(cacheKey, result);
+  return result;
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 
@@ -222,69 +300,9 @@ export default async function RootLayout({
   // themes.css defines the same properties as fallback defaults.
   // ---------------------------------------------------------------------------
 
-  const headingFontFamily =
-    FONT_NAME_TO_VAR[appearance.headingFont] ?? FONT_NAME_TO_VAR["Inter"];
-  const bodyFontFamily =
-    FONT_NAME_TO_VAR[appearance.bodyFont] ?? FONT_NAME_TO_VAR["Inter"];
-  const borderRadiusValue =
-    BORDER_RADIUS_MAP[appearance.borderRadius] ?? BORDER_RADIUS_MAP["soft"];
+  const { lightVars, darkVars } = buildCssVars(appearance);
 
-  const lightVars = `
-    --zymbiq-primary: ${appearance.primaryColor};
-    --zymbiq-secondary: ${appearance.secondaryColor};
-    --zymbiq-accent: ${appearance.accentColor};
-    --zymbiq-bg: ${appearance.backgroundColor};
-    --zymbiq-surface: #FFFFFF;
-    --zymbiq-border: #E5E7EB;
-    --zymbiq-text: ${appearance.textColor};
-    --zymbiq-muted: ${appearance.mutedColor};
-    --zymbiq-text-inverse: #FFFFFF;
-    --zymbiq-radius: ${borderRadiusValue};
-    --font-heading: ${headingFontFamily};
-    --font-body: ${bodyFontFamily};
-    --background: ${appearance.backgroundColor};
-    --foreground: ${appearance.textColor};
-    --card: #FFFFFF;
-    --card-foreground: ${appearance.textColor};
-    --popover: #FFFFFF;
-    --popover-foreground: ${appearance.textColor};
-    --border: #E5E7EB;
-    --input: #E5E7EB;
-    --ring: ${appearance.accentColor};
-    --muted: #F3F4F6;
-    --muted-foreground: ${appearance.mutedColor};
-  `;
-
-  const darkVars = `
-    --zymbiq-primary: #F9FAFB;
-    --zymbiq-secondary: #D1D5DB;
-    --zymbiq-accent: #818CF8;
-    --zymbiq-bg: #0A0A0A;
-    --zymbiq-surface: #111827;
-    --zymbiq-border: #374151;
-    --zymbiq-text: #F9FAFB;
-    --zymbiq-muted: #9CA3AF;
-    --zymbiq-text-inverse: #111827;
-    --font-heading: ${headingFontFamily};
-    --font-body: ${bodyFontFamily};
-    --zymbiq-radius: ${borderRadiusValue};
-    --background: #0A0A0A;
-    --foreground: #F9FAFB;
-    --card: #111827;
-    --card-foreground: #F9FAFB;
-    --popover: #111827;
-    --popover-foreground: #F9FAFB;
-    --border: #374151;
-    --input: #374151;
-    --ring: #818CF8;
-    --muted: #1F2937;
-    --muted-foreground: #9CA3AF;
-  `;
-
-  const themeStyleTag = `
-    :root { ${lightVars} }
-    .dark { ${darkVars} }
-  `;
+  const themeStyleTag = `:root { ${lightVars} } .dark { ${darkVars} }`;
 
   // ---------------------------------------------------------------------------
   // Compose html className: all font variables + optional 'dark' class.

@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { useStore } from '@/store/index';
 import { cn } from '@/lib/utils';
@@ -45,8 +46,14 @@ export default function TrustStrip() {
     );
   }
 
-  // ── Animated ticker — duplicate 3× for seamless loop ─────────────────────
-  const tripled = [...items, ...items, ...items];
+  // ── Animated ticker — duplicate 2× for seamless loop ─────────────────────
+  // 2× is sufficient: the first copy scrolls out while the second is visible,
+  // at which point the animation loops seamlessly. 3× added ~33% extra DOM nodes
+  // and paint work with zero visual benefit.
+  // Duration scales with item count so the speed feels consistent regardless of
+  // how many trust items the admin has configured (≈ 4 s per item).
+  const doubled = useMemo(() => [...items, ...items], [items]);
+  const tickerDuration = `${Math.max(items.length * 4, 12)}s`;
 
   return (
     <div
@@ -56,9 +63,9 @@ export default function TrustStrip() {
     >
       <div
         className="flex items-center w-max animate-ticker hover:[animation-play-state:paused]"
-        style={{ animationDuration: '30s' }}
+        style={{ animationDuration: tickerDuration }}
       >
-        {tripled.map((item, index) => (
+        {doubled.map((item, index) => (
           <span key={index} className="flex items-center">
             <span className="text-xs uppercase tracking-wider whitespace-nowrap px-4 font-medium" style={{ color: 'var(--zymbiq-text)' }}>
               {item.label}

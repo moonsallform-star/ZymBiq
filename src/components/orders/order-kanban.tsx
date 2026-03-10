@@ -8,7 +8,6 @@ import {
   type DropResult,
 } from '@hello-pangea/dnd'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabaseClient, REALTIME_CHANNELS } from '@/lib/supabase'
 import OrderKanbanCard from '@/components/orders/order-kanban-card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -121,7 +120,11 @@ export default function OrderKanban() {
     queryKey: QUERY_KEY,
     queryFn: fetchAllOrders,
     staleTime: 30_000,
-    refetchOnWindowFocus: false,
+    // Poll every 30s as a lightweight fallback now that always-on Realtime
+    // is no longer mounted at layout level. Realtime can be re-added here
+    // scoped to this page component if real-time push is critical.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   })
 
   const grouped = groupByStatus(orders)

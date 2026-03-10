@@ -410,17 +410,21 @@ export default function Header() {
   const { data: siteConfig } = useSiteConfig();
   const animationIntensity = useStore((s) => s.animationIntensity);
 
-  // Scroll shadow state
-  const [scrolled, setScrolled] = React.useState(false);
+  // Scroll shadow — use a ref + imperative class toggle instead of setState so
+  // scroll events never trigger a React re-render of the entire header tree.
+  const headerRef = React.useRef<HTMLElement>(null);
 
   React.useEffect(() => {
     function handleScroll() {
-      setScrolled(window.scrollY > 0);
+      if (!headerRef.current) return;
+      if (window.scrollY > 0) {
+        headerRef.current.classList.add('shadow-sm', 'header-scrolled');
+      } else {
+        headerRef.current.classList.remove('shadow-sm', 'header-scrolled');
+      }
     }
 
-    // Set initial state
     handleScroll();
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -439,11 +443,11 @@ export default function Header() {
 
   return (
     <header
+      ref={headerRef}
       className={cn(
         "fixed top-0 inset-x-0 z-40",
         "h-16 flex items-center",
         "backdrop-blur-sm border-b border-[var(--zymbiq-border)]/20",
-        scrolled && "shadow-sm"
       )}
       style={{ backgroundColor: 'color-mix(in srgb, var(--zymbiq-bg) 20%, transparent)' }}
     >

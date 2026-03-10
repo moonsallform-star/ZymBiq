@@ -30,15 +30,27 @@ export const revalidate = 300;
 // -----------------------------------------------------------------------------
 
 export default async function ShowroomPage() {
-  // Fetch total visible project count for the subtitle line.
-  // Non-blocking: if it fails, fall back to 0.
+  // Fetch count + first page of projects in parallel.
+  // The first page is passed as initialData to ShowroomClient so the grid
+  // renders immediately on hydration without a client-side fetch waterfall.
   let totalCount = 0;
+  let initialProjects: import('@/types/database').ProjectWithFaqs[] = [];
+
   try {
-    totalCount = await prisma.project.count({
-      where: { isVisible: true },
-    });
+    const [count, firstPage] = await Promise.all([
+      prisma.project.count({ where: { isVisible: true } }),
+      prisma.project.findMany({
+        where: { isVisible: true },
+        orderBy: { sortOrder: 'asc' },
+        take: 12,
+        include: { faqs: true },
+      }),
+    ]);
+    totalCount = count;
+    initialProjects = firstPage;
   } catch {
     totalCount = 0;
+    initialProjects = [];
   }
 
   // Fetch page heading from SiteConfig (optional customisation).
@@ -95,7 +107,7 @@ export default async function ShowroomPage() {
       {/* ------------------------------------------------------------------ */}
       <section className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
         <Suspense fallback={<ShowroomSkeleton />}>
-          <ShowroomClient />
+          <ShowroomClient initialProjects={initialProjects} />
         </Suspense>
       </section>
     </main>
