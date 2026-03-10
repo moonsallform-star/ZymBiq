@@ -88,6 +88,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   // CSS custom properties on the next request.
   // ---------------------------------------------------------------------------
   revalidatePath("/", "layout");
+  revalidatePath("/admin/appearance");
+  revalidatePath("/admin");
 
   return NextResponse.json({ data: { updated: true } });
 }

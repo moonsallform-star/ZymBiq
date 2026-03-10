@@ -139,16 +139,7 @@ const BORDER_RADIUS_MAP: Record<string, string> = {
 // when SiteConfig hasn't changed (common during ISR warm cache hits).
 // =============================================================================
 
-const _cssCache = new Map<string, { lightVars: string; darkVars: string; headingFont: string; bodyFont: string }>();
-
 function buildCssVars(appearance: SiteConfigAppearance) {
-  const cacheKey = [
-    appearance.primaryColor, appearance.secondaryColor, appearance.accentColor,
-    appearance.backgroundColor, appearance.textColor, appearance.mutedColor,
-    appearance.borderRadius, appearance.headingFont, appearance.bodyFont,
-  ].join('|');
-
-  if (_cssCache.has(cacheKey)) return _cssCache.get(cacheKey)!;
 
   const headingFontFamily = FONT_NAME_TO_VAR[appearance.headingFont] ?? FONT_NAME_TO_VAR["Inter"];
   const bodyFontFamily    = FONT_NAME_TO_VAR[appearance.bodyFont]    ?? FONT_NAME_TO_VAR["Inter"];
@@ -206,9 +197,7 @@ function buildCssVars(appearance: SiteConfigAppearance) {
     --muted-foreground: #9CA3AF;
   `;
 
-  const result = { lightVars, darkVars, headingFont: headingFontFamily, bodyFont: bodyFontFamily };
-  _cssCache.set(cacheKey, result);
-  return result;
+  return { lightVars, darkVars, headingFont: headingFontFamily, bodyFont: bodyFontFamily };
 }
 
 // =============================================================================
@@ -237,6 +226,8 @@ async function fetchSiteConfig(): Promise<{
   platform: SiteConfigPlatform;
 }> {
   try {
+    const { unstable_noStore: noStore } = await import("next/cache");
+    noStore();
     const rows = await prisma.siteConfig.findMany({
       where: {
         key: {
