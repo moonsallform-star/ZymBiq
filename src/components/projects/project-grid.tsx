@@ -20,9 +20,19 @@ import type { ProjectWithFaqs } from '@/types/database';
 import type { PaginatedResponse } from '@/types/api';
 
 // Lazy-load the comparison dialog to avoid loading it on initial paint
+// Lazy-load only when the user actually opens the comparison dialog
+let comparisonImportStarted = false;
 const ProjectComparison = React.lazy(
   () => import('@/components/projects/project-comparison'),
 );
+
+// Preload on first hover of comparison bar to eliminate dialog open latency
+function preloadComparison() {
+  if (!comparisonImportStarted) {
+    comparisonImportStarted = true;
+    void import('@/components/projects/project-comparison');
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -81,6 +91,9 @@ interface ProjectGridProps {
 // -----------------------------------------------------------------------------
 // Component
 // -----------------------------------------------------------------------------
+
+// Memoized card wrapper — prevents re-render when only pagination state changes
+const MemoProjectCard = React.memo(ProjectCard);
 
 // -----------------------------------------------------------------------------
 // ComparisonBar — reads Zustand independently so the main grid never re-renders
@@ -155,6 +168,8 @@ const ComparisonBar = React.memo(function ComparisonBar() {
           <Button
             variant="default" size="sm" className="gap-1.5"
             onClick={() => setCompareOpen(true)}
+            onMouseEnter={preloadComparison}
+            onFocus={preloadComparison}
             disabled={comparisonProjects.length < 2}
             aria-label="Open comparison view"
           >
@@ -181,9 +196,22 @@ export default function ProjectGrid({ onAiResults, initialProjects }: ProjectGri
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // ── Infinite query ─────────────────────────────────────────────────────────
-  // Build a stable filter key from the URL params for cache busting
-  const filterKey = searchParams.toString();
+  // ── Stable filter key — only re-key on actual filter params ───────────────
+  const filterKey = React.useMemo(() => {
+    const relevant = new URLSearchParams();
+    const keys = ['category', 'techStack', 'minPrice', 'maxPrice', 'complexity', 'sort', 'search'];
+    keys.forEach((k) => {
+      const v = searchParams.get(k);
+      if (v) relevant.set(k, v);
+    });
+    return relevant.toString();
+  }, [searchParams]);
+
+  // ── Stable queryFn params snapshot ────────────────────────────────────────
+  const searchParamsRef = React.useRef(searchParams);
+  React.useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
 
   const {
     data,
@@ -195,26 +223,56 @@ export default function ProjectGrid({ onAiResults, initialProjects }: ProjectGri
   } = useInfiniteQuery<PaginatedResponse<ProjectWithFaqs>>({
     queryKey: ['projects', filterKey],
     queryFn: async ({ pageParam }) => {
-      const qs = buildApiParams(searchParams, pageParam as string | undefined);
+      const qs = buildApiParams(searchParamsRef.current, pageParam as string | undefined);
       const res = await fetch(`/api/projects?${qs}`);
       if (!res.ok) throw new Error('Failed to fetch projects');
       const json = await res.json();
       return json as PaginatedResponse<ProjectWithFaqs>;
     },
-     initialPageParam: undefined,
-    initialData: initialProjects && initialProjects.length > 0
-      ? {
-          pages: [{ data: initialProjects, hasMore: initialProjects.length === 12, nextCursor: undefined, total: initialProjects.length }],
-          pageParams: [undefined],
-        }
-      : undefined,
+    initialPageParam: undefined,
     getNextPageParam: (lastPage) =>
-      lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
+      lastPage.hasMore && lastPage.nextCursor != null ? lastPage.nextCursor : undefined,
     staleTime: 60 * 1000,
-    enabled: onAiResults == null, // disable when AI results are active
+    gcTime: 5 * 60 * 1000,
+    enabled: onAiResults == null,
   });
 
-  // ── Intersection Observer for infinite scroll ──────────────────────────────
+  // ── Memoized flat project list ─────────────────────────────────────────────
+  const allProjects = React.useMemo<ProjectWithFaqs[]>(
+    () =>
+      onAiResults != null
+        ? onAiResults
+        : (data?.pages.flatMap((p) => p.data) ?? []),
+    [onAiResults, data],
+  );
+
+  const showEmpty = !isLoading && !isError && allProjects.length === 0;
+
+  const allLoaded =
+    onAiResults == null &&
+    !isLoading &&
+    !isFetchingNextPage &&
+    !hasNextPage &&
+    allProjects.length > 0 &&
+    data != null;
+
+  // ── Stable fetchNextPage ref — prevents observer teardown on re-render ─────
+  const fetchNextPageRef = React.useRef(fetchNextPage);
+  React.useEffect(() => {
+    fetchNextPageRef.current = fetchNextPage;
+  }, [fetchNextPage]);
+
+  const hasNextPageRef = React.useRef(hasNextPage);
+  React.useEffect(() => {
+    hasNextPageRef.current = hasNextPage;
+  }, [hasNextPage]);
+
+  const isFetchingNextPageRef = React.useRef(isFetchingNextPage);
+  React.useEffect(() => {
+    isFetchingNextPageRef.current = isFetchingNextPage;
+  }, [isFetchingNextPage]);
+
+  // ── Intersection Observer — stable, never torn down ────────────────────────
   const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -223,31 +281,20 @@ export default function ProjectGrid({ onAiResults, initialProjects }: ProjectGri
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage();
+        if (
+          entries[0]?.isIntersecting &&
+          hasNextPageRef.current &&
+          !isFetchingNextPageRef.current
+        ) {
+          void fetchNextPageRef.current();
         }
       },
-      { rootMargin: '200px' },
+      { rootMargin: '300px' },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
-
-  // ── Derived project list ───────────────────────────────────────────────────
-  const allProjects: ProjectWithFaqs[] =
-    onAiResults != null
-      ? onAiResults
-      : (data?.pages.flatMap((p) => p.data) ?? []);
-
-  const showEmpty =
-    !isLoading && !isError && allProjects.length === 0;
-
-  const allLoaded =
-    onAiResults == null &&
-    !isLoading &&
-    !hasNextPage &&
-    allProjects.length > 0;
+  }, []); // empty — observer is stable via refs
 
   // ── Clear filters ──────────────────────────────────────────────────────────
   const clearFilters = React.useCallback(() => {
@@ -268,9 +315,9 @@ export default function ProjectGrid({ onAiResults, initialProjects }: ProjectGri
             <SkeletonCard key={`sk-init-${i}`} />
           ))}
 
-        {/* Project cards */}
+        {/* Project cards — stable references prevent unnecessary re-renders */}
         {allProjects.map((project) => (
-          <ProjectCard
+          <MemoProjectCard
             key={project.id}
             project={project}
             showCompareCheckbox
