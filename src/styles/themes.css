@@ -1,0 +1,202 @@
+/* src/styles/themes.css */
+/* =============================================================================
+   ZYMBIQ THEME TOKENS — CSS Custom Property fallback defaults.
+   
+   These values are the static fallback layer. At runtime, src/app/layout.tsx
+   overwrites every --zymbiq-* property and --font-* variable via a server-
+   rendered inline style on the <html> element, sourced from SiteConfig in the
+   DB. This file is therefore only ever "visible" on:
+     - First paint before JS hydrates (prevented by SSR inline style)
+     - Environments where the DB is unreachable and layout.tsx falls through
+       to DEFAULT_SITE_CONFIG, which mirrors these exact values
+   
+   AUTHORING RULES:
+     - All color values must match DEFAULT_SITE_CONFIG.appearance in constants.ts
+     - No Tailwind utilities here — plain CSS custom properties only
+     - Semantic tokens (success / warning / error / info) are NOT overridable
+       from admin; they stay fixed and are defined here as the single source
+     - Dark mode overrides live in the .dark {} block below :root {}
+     - The shadcn/ui compatibility layer at the bottom maps Radix-style tokens
+       to zymbiq tokens so shadcn components resolve correctly without any
+       custom shadcn theme configuration
+============================================================================= */
+
+/* =============================================================================
+   LIGHT THEME (DEFAULT)
+============================================================================= */
+
+:root {
+  /* ── Brand colours ── */
+  --zymbiq-primary:       #111827;
+  --zymbiq-secondary:     #374151;
+  --zymbiq-accent:        #6366F1;
+
+  /* ── Surface colours ── */
+  --zymbiq-bg:            #FAFAFA;
+  --zymbiq-surface:       #FFFFFF;
+  --zymbiq-border:        #E5E7EB;
+
+  /* ── Text colours ── */
+  --zymbiq-text:          #111827;
+  --zymbiq-muted:         #6B7280;
+  --zymbiq-text-inverse:  #FFFFFF;
+
+  /* ── Shape ── */
+  --zymbiq-radius:        8px;
+
+  /* ── Typography ──
+     Actual font stacks are injected server-side via layout.tsx once Google
+     Fonts variables are available. These are the CSS-level fallbacks only. */
+  --font-heading:         'Inter', system-ui, -apple-system, sans-serif;
+  --font-body:            'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ── Semantic / fixed — not admin-configurable ── */
+  --zymbiq-success:       #10B981;
+  --zymbiq-warning:       #F59E0B;
+  --zymbiq-error:         #EF4444;
+  --zymbiq-info:          #3B82F6;
+
+  /* ── Derived opacity variants (used in globals.css utilities) ── */
+  --zymbiq-accent-10:     color-mix(in srgb, #6366F1 10%, transparent);
+  --zymbiq-accent-20:     color-mix(in srgb, #6366F1 20%, transparent);
+  --zymbiq-accent-30:     color-mix(in srgb, #6366F1 30%, transparent);
+
+  /* ── shadcn/ui compatibility layer ──────────────────────────────────────
+     Radix UI primitives and shadcn components resolve background / foreground
+     via these HSL-channel variables. We bridge them to zymbiq tokens so
+     shadcn works without a separate theme configuration file.
+     
+     Note: shadcn expects HSL *channels* (no hsl() wrapper) for its own
+     utilities, but since we are using direct CSS var() references in
+     tailwind.config.ts rather than the shadcn CSS-variable convention, the
+     mappings below are provided as direct hex/colour aliases for any shadcn
+     component that reads them natively. ─────────────────────────────────── */
+  --background:           #FAFAFA;
+  --foreground:           #111827;
+  --card:                 #FFFFFF;
+  --card-foreground:      #111827;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #111827;
+  --primary:              #111827;
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #374151;
+  --secondary-foreground: #FFFFFF;
+  --muted:                #F3F4F6;
+  --muted-foreground:     #6B7280;
+  --accent-shadcn:        #6366F1;
+  --accent-foreground:    #FFFFFF;
+  --destructive:          #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border:               #E5E7EB;
+  --input:                #E5E7EB;
+  --ring:                 #6366F1;
+
+  /* ── Communication hub z-index tokens ── */
+  --z-hub:                60;
+  --z-mobile-nav:         50;
+  --z-modal:              100;
+  --z-toast:              110;
+
+  /* ── Zymbiq Brand Atmosphere System ── */
+  --zymbiq-forge-line:    rgba(99, 102, 241, 0.14);
+  --zymbiq-forge-glow:    rgba(99, 102, 241, 0.06);
+  --zymbiq-forge-streak:  rgba(99, 102, 241, 0.20);
+  --zymbiq-forge-node:    rgba(99, 102, 241, 0.28);
+  --zymbiq-forge-deep:    rgba(99, 102, 241, 0.03);
+  --zymbiq-mesh-opacity:  0.6;
+}
+
+/* =============================================================================
+   DARK THEME
+   Applied when layout.tsx sets class="dark" on <html> based on
+   SiteConfig.appearance.darkMode or user localStorage override.
+============================================================================= */
+
+.dark {
+  /* ── Brand colours ── */
+  --zymbiq-primary:       #F9FAFB;
+  --zymbiq-secondary:     #D1D5DB;
+  --zymbiq-accent:        #818CF8;
+
+  /* ── Surface colours ── */
+  --zymbiq-bg:            #0A0A0A;
+  --zymbiq-surface:       #111827;
+  --zymbiq-border:        #374151;
+
+  /* ── Text colours ── */
+  --zymbiq-text:          #F9FAFB;
+  --zymbiq-muted:         #9CA3AF;
+  --zymbiq-text-inverse:  #111827;
+
+  /* ── Derived opacity variants ── */
+  --zymbiq-accent-10:     color-mix(in srgb, #818CF8 10%, transparent);
+  --zymbiq-accent-20:     color-mix(in srgb, #818CF8 20%, transparent);
+  --zymbiq-accent-30:     color-mix(in srgb, #818CF8 30%, transparent);
+
+  /* ── Zymbiq Brand Atmosphere System — dark overrides ── */
+  --zymbiq-forge-line:    rgba(129, 140, 248, 0.22);
+  --zymbiq-forge-glow:    rgba(129, 140, 248, 0.12);
+  --zymbiq-forge-streak:  rgba(129, 140, 248, 0.18);
+  --zymbiq-forge-node:    rgba(129, 140, 248, 0.3);
+  --zymbiq-forge-deep:    rgba(129, 140, 248, 0.06);
+  --zymbiq-mesh-opacity:  0.75;
+
+  /* Semantic tokens remain fixed across themes */
+
+  /* ── shadcn/ui compatibility layer — dark overrides ── */
+  --background:           #0A0A0A;
+  --foreground:           #F9FAFB;
+  --card:                 #111827;
+  --card-foreground:      #F9FAFB;
+  --popover:              #111827;
+  --popover-foreground:   #F9FAFB;
+  --primary:              #F9FAFB;
+  --primary-foreground:   #111827;
+  --secondary:            #1F2937;
+  --secondary-foreground: #F9FAFB;
+  --muted:                #1F2937;
+  --muted-foreground:     #9CA3AF;
+  --accent-shadcn:        #818CF8;
+  --accent-foreground:    #111827;
+  --destructive:          #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border:               #374151;
+  --input:                #374151;
+  --ring:                 #818CF8;
+}
+
+/* =============================================================================
+   BORDER RADIUS PRESETS
+   Applied when admin selects a border radius option. The --zymbiq-radius
+   value is set by layout.tsx from BORDER_RADIUS_MAP; these classes are
+   provided as named helpers if needed by static stylesheets.
+============================================================================= */
+
+.radius-sharp  { --zymbiq-radius: 0px;    }
+.radius-soft   { --zymbiq-radius: 4px;    }
+.radius-rounded{ --zymbiq-radius: 8px;    }
+.radius-pill   { --zymbiq-radius: 999px;  }
+
+/* =============================================================================
+   ANIMATION INTENSITY OVERRIDES
+   The layout.tsx-rendered html element may receive one of these classes based
+   on SiteConfig.layout.animationIntensity. Components read from Zustand store
+   (setAnimationIntensity) but these CSS hooks allow pure-CSS component
+   animations to respect the setting without JavaScript.
+============================================================================= */
+
+/* "reduced": shorten all transition/animation durations to 25% */
+.anim-reduced *,
+.anim-reduced *::before,
+.anim-reduced *::after {
+  animation-duration:    0.1ms !important;
+  transition-duration:   0.1ms !important;
+}
+
+/* "off": eliminate all motion entirely — mirrors prefers-reduced-motion */
+.anim-off *,
+.anim-off *::before,
+.anim-off *::after {
+  animation:             none !important;
+  transition:            none !important;
+}

@@ -1,0 +1,295 @@
+// =============================================================================
+// Zymbiq — Prisma Schema
+// Generator: prisma-client-js
+// Datasource: Neon PostgreSQL (serverless) with pgbouncer pooling
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum OrderType {
+  PREBUILT
+  CUSTOM
+}
+
+enum OrderStatus {
+  NEW
+  IN_DISCUSSION
+  BUILDING
+  REVIEW
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  BKASH
+  NAGAD
+}
+
+enum PaymentStatus {
+  PENDING
+  PENDING_MANUAL_VERIFICATION
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// =============================================================================
+// AUTH MODELS (NextAuth.js v5 / Auth.js adapter)
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  isAdmin       Boolean   @default(false)
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders   Order[]
+  messages Message[]
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// =============================================================================
+// PLATFORM MODELS
+// =============================================================================
+
+model Project {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  title        String
+  description  String  @db.Text
+  category     String
+  techStack    String[]
+  price        Float
+  demoUrl      String?
+  githubRepo   String?
+  features     String[]
+  qualityScore Int     @default(100)
+  buildTime    String
+  fileCount    Int     @default(0)
+  thumbnailUrl String?
+  isFeatured   Boolean @default(false)
+  isVisible    Boolean @default(true)
+  sortOrder    Int     @default(0)
+  complexity   String  @default("medium")
+  views        Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  faqs   ProjectFaq[]
+  orders Order[]
+
+  @@index([isVisible, isFeatured])
+  @@index([category])
+  @@index([slug])
+}
+
+model ProjectFaq {
+  id        String @id @default(cuid())
+  projectId String
+  question  String
+  answer    String @db.Text
+  sortOrder Int    @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  trackingCode      String        @unique @default(cuid())
+  userId            String?
+  guestEmail        String?
+  guestName         String?
+  guestPhone        String?
+  orderType         OrderType
+  projectId         String?
+  status            OrderStatus   @default(NEW)
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentIntentId   String?
+  manualTxId        String?
+  amountUsd         Float?
+  amountBdt         Float?
+  customBrief       Json?
+  estimatedPrice    Float?
+  estimatedTimeline String?
+  deadline          DateTime?
+  devforgeProjectId String?
+  buildPhase        String?
+  notes             String?       @db.Text
+  adminNotes        String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  deliverables OrderDeliverable[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([userId])
+  @@index([trackingCode])
+}
+
+model OrderDeliverable {
+  id      String  @id @default(cuid())
+  orderId String
+  label   String
+  status  String  @default("pending")
+  url     String?
+  note    String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  orderId   String?
+  userId    String?
+  threadId  String
+  content   String   @db.Text
+  isAdmin   Boolean  @default(false)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([threadId])
+  @@index([userId])
+}
+
+model BlogPost {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  excerpt        String    @db.Text
+  content        String    @db.Text
+  coverImageUrl  String?
+  readTime       Int       @default(5)
+  isPublished    Boolean   @default(false)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([slug])
+}
+
+model Testimonial {
+  id          String  @id @default(cuid())
+  clientName  String
+  projectType String
+  quote       String  @db.Text
+  avatarUrl   String?
+  isVisible   Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+}
+
+model FaqItem {
+  id        String  @id @default(cuid())
+  category  String
+  question  String
+  answer    String  @db.Text
+  sortOrder Int     @default(0)
+  isVisible Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model PricingTier {
+  id           String   @id @default(cuid())
+  name         String
+  price        Float
+  billingLabel String   @default("one-time")
+  features     String[]
+  isRecommended Boolean @default(false)
+  ctaLabel     String   @default("Get Started")
+  sortOrder    Int      @default(0)
+  isVisible    Boolean  @default(true)
+}
+
+model SiteConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  category  String   @default("general")
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  event     String
+  page      String?
+  projectId String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([event, createdAt])
+}
