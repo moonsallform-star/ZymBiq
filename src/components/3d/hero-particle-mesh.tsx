@@ -70,8 +70,8 @@ function buildParticles(): Particle[] {
         tier === 0 ? 0.40 + Math.random() * 0.20 :
         tier === 1 ? 0.60 + Math.random() * 0.30 :
                      0.85 + Math.random() * 0.50,
-      dTheta: (Math.random() - 0.5) * (tier === 0 ? 0.0003 : 0.0007),
-      dPhi:   (Math.random() - 0.5) * 0.00025,
+      dTheta: (Math.random() - 0.5) * (tier === 0 ? 0.0018 : 0.0035),
+      dPhi:   (Math.random() - 0.5) * 0.0015,
     });
   }
   return list;
@@ -200,15 +200,9 @@ function ParticleCanvas({ reduced }: { reduced: boolean }) {
       const R  = Math.min(W, H) * 0.48;
 
       // Smooth rotation
-      const tY = mouseRef.current.nx * 0.8
-               + Math.sin(autoT * 0.10) * 0.40
-               + Math.cos(autoT * 0.06) * 0.18;
-      const tX = mouseRef.current.ny * -0.5
-               + Math.sin(autoT * 0.07) * 0.22
-               + Math.cos(autoT * 0.04) * 0.10;
-
-      rotY += (tY - rotY) * LERP;
-      rotX += (tX - rotX) * LERP;
+      // Continuous autonomous spin + mouse influence
+      rotY += 0.008 + mouseRef.current.nx * 0.012;
+      rotX += (mouseRef.current.ny * -0.4 + Math.sin(autoT * 0.12) * 0.18 - rotX) * 0.04;
 
       // Drift
       for (const p of particles) {

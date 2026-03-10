@@ -164,6 +164,7 @@ export default function LogoEmobot({
   const emotionIndexRef             = React.useRef(0);
   const controls                    = useAnimationControls();
   const glowControls                = useAnimationControls();
+  const flipControls                = useAnimationControls();
 
   // ── Play autonomous motion sequence per emotion ──────────────────────────
   const playMotion = React.useCallback(async (em: EmotionState, hovered: boolean) => {
@@ -225,6 +226,35 @@ export default function LogoEmobot({
     playMotion(active, isHovered);
     playGlow(active, isHovered);
   }, [emotion, isHovered, animationIntensity, prefersReduced, playMotion, playGlow]);
+
+  // ── Sudden 360° flip — fires randomly every 6–14 seconds ─────────────────
+  React.useEffect(() => {
+    if (animationIntensity === 'off' || prefersReduced) return;
+    let timer: ReturnType<typeof setTimeout>;
+
+    async function scheduleFlip() {
+      const delay = isHovered
+        ? 3000 + Math.random() * 2000
+        : 6000 + Math.random() * 8000;
+
+      timer = setTimeout(async () => {
+        // Whip around — fast acceleration, hard stop
+        await flipControls.start({
+          rotateY: [0, 360],
+          transition: {
+            duration: isHovered ? 0.55 : 0.75,
+            ease: [0.2, 0, 0.1, 1], // fast start, snap to end
+          },
+        });
+        // Reset to 0 instantly (same visual position as 360)
+        flipControls.set({ rotateY: 0 });
+        scheduleFlip();
+      }, delay);
+    }
+
+    scheduleFlip();
+    return () => clearTimeout(timer);
+  }, [animationIntensity, prefersReduced, isHovered, flipControls]);
 
   // ── Mouse tilt (extra layer on top of autonomous motion) ─────────────────
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -294,19 +324,10 @@ export default function LogoEmobot({
         animate={glowControls}
       />
 
-      {/* Continuous 360° Y-axis spin layer — always rotating */}
+      {/* Sudden 360° flip layer — whips around then sits still */}
       <motion.div
         style={{ transformStyle: 'preserve-3d', display: 'inline-flex' }}
-        animate={{
-          rotateY: [0, 360],
-        }}
-        transition={{
-          rotateY: {
-            duration: isHovered ? 1.8 : 8,
-            repeat: Infinity,
-            ease: 'linear',
-          },
-        }}
+        animate={flipControls}
       >
         {/* Outer tilt wrapper — mouse-driven spring */}
         <motion.div
