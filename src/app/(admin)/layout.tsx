@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import AdminNavLink from "./_components/admin-nav-link";
 import AdminMobileNav from "./_components/admin-mobile-nav";
+import AdminThemeToggle from "./_components/admin-theme-toggle";
+import { Toaster } from "@/components/ui/toaster";
 
 // =============================================================================
 // Nav item definition
@@ -196,15 +198,18 @@ function AdminTopBar({
       {/* Spacer — individual pages own their heading content */}
       <div className="flex-1" />
 
-      {/* Subtle admin indicator on desktop */}
-      <div className="hidden md:flex items-center gap-2">
-        <span className="text-xs text-muted truncate max-w-[180px]">
-          {adminEmail ?? adminName ?? "Admin"}
-        </span>
-        <span
-          className="h-2 w-2 shrink-0 rounded-full bg-accent"
-          title="Admin session active"
-        />
+      {/* Right side: theme toggle + admin indicator */}
+      <div className="flex items-center gap-3">
+        <AdminThemeToggle />
+        <div className="hidden md:flex items-center gap-2">
+          <span className="text-xs text-muted truncate max-w-[180px]">
+            {adminEmail ?? adminName ?? "Admin"}
+          </span>
+          <span
+            className="h-2 w-2 shrink-0 rounded-full bg-accent"
+            title="Admin session active"
+          />
+        </div>
       </div>
     </header>
   );
@@ -230,9 +235,39 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--zymbiq-bg)] relative">
+
+      {/* ── Forge canvas atmosphere — matches public layout ── */}
+      <div className="forge-canvas pointer-events-none" aria-hidden="true">
+        <div className="forge-line" style={{ top: '6%', left: '0', width: '40%' }}>
+          <div className="forge-pulse-traveler" style={{ '--pulse-duration': '6s', '--pulse-delay': '0s' } as React.CSSProperties} />
+        </div>
+        <div className="forge-line" style={{ top: '18%', left: '62%', width: '38%' }}>
+          <div className="forge-pulse-traveler reverse" style={{ '--pulse-duration': '7s', '--pulse-delay': '1s' } as React.CSSProperties} />
+        </div>
+        <div className="forge-line" style={{ top: '42%', left: '15%', width: '50%' }}>
+          <div className="forge-pulse-traveler" style={{ '--pulse-duration': '5s', '--pulse-delay': '0.5s' } as React.CSSProperties} />
+        </div>
+        <div className="forge-line" style={{ top: '68%', left: '55%', width: '45%' }}>
+          <div className="forge-pulse-traveler reverse" style={{ '--pulse-duration': '8s', '--pulse-delay': '2s' } as React.CSSProperties} />
+        </div>
+        <div className="forge-line" style={{ top: '85%', left: '5%', width: '50%' }}>
+          <div className="forge-pulse-traveler" style={{ '--pulse-duration': '9s', '--pulse-delay': '1.5s' } as React.CSSProperties} />
+        </div>
+        <div className="forge-node forge-node-breathe" style={{ top: '6%', left: '40%', '--breathe-duration': '3.5s', '--breathe-delay': '0s' } as React.CSSProperties} />
+        <div className="forge-node forge-node-breathe" style={{ top: '18%', left: '62%', '--breathe-duration': '4s', '--breathe-delay': '0.8s' } as React.CSSProperties} />
+        <div className="forge-node forge-node-breathe" style={{ top: '42%', left: '65%', '--breathe-duration': '5s', '--breathe-delay': '1.2s' } as React.CSSProperties} />
+        <div className="forge-node forge-node-breathe" style={{ top: '68%', left: '55%', '--breathe-duration': '3.8s', '--breathe-delay': '0.4s' } as React.CSSProperties} />
+        <div className="forge-fragment" style={{ top: '12%', left: '75%', width: 20, height: 20, transform: 'rotate(25deg)', '--float-duration': '9s', '--float-delay': '0s' } as React.CSSProperties} />
+        <div className="forge-fragment" style={{ top: '55%', left: '5%', width: 14, height: 14, transform: 'rotate(-15deg)', '--float-duration': '11s', '--float-delay': '1.5s' } as React.CSSProperties} />
+        <div className="forge-fragment" style={{ top: '80%', left: '90%', width: 18, height: 18, transform: 'rotate(40deg)', '--float-duration': '8s', '--float-delay': '3s' } as React.CSSProperties} />
+        <div className="forge-h-streak" style={{ top: '30%', '--streak-duration': '10s', '--streak-delay': '0s' } as React.CSSProperties} />
+        <div className="forge-h-streak" style={{ top: '75%', '--streak-duration': '12s', '--streak-delay': '4s' } as React.CSSProperties} />
+        <div className="forge-v-streak" style={{ left: '60%', '--streak-duration': '14s', '--streak-delay': '2s' } as React.CSSProperties} />
+      </div>
+
       {/* Desktop sidebar — hidden below md breakpoint */}
-      <div className="hidden md:block">
+      <div className="hidden md:block relative z-30">
         <Sidebar
           adminName={session.user.name}
           adminEmail={session.user.email}
@@ -240,7 +275,7 @@ export default async function AdminLayout({
       </div>
 
       {/* Main content offset by sidebar width on desktop */}
-      <div className="flex min-h-screen flex-col md:ml-60">
+      <div className="relative z-10 flex min-h-screen flex-col md:ml-60">
         <AdminTopBar
           adminName={session.user.name}
           adminEmail={session.user.email}
@@ -250,6 +285,8 @@ export default async function AdminLayout({
           <RealtimeProvider>{children}</RealtimeProvider>
         </main>
       </div>
+
+      <Toaster />
     </div>
   );
 }
