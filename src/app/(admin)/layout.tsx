@@ -39,7 +39,7 @@ export interface NavItem {
   icon: React.ReactNode;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
   {
     label: "Dashboard",
     href: "/admin",
