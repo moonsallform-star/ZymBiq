@@ -326,6 +326,8 @@ export default function AppearanceEditor() {
     faviconUrl: siteConfig.appearance.faviconUrl ?? '',
   };
 
+  const isSavingRef = useRef(false);
+
   const {
     control,
     handleSubmit,
@@ -338,8 +340,11 @@ export default function AppearanceEditor() {
     defaultValues,
   });
 
-  // Reset defaults when siteConfig loads
+  // Reset defaults when siteConfig loads — but not while a save is in flight.
+  // isSavingRef is set true before mutation fires and false in onSettled,
+  // preventing the reset from overwriting form state mid-save.
   useEffect(() => {
+    if (isSavingRef.current) return;
     reset({
       primaryColor: siteConfig.appearance.primaryColor,
       secondaryColor: siteConfig.appearance.secondaryColor,
@@ -391,6 +396,7 @@ export default function AppearanceEditor() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.siteConfig() });
+      void queryClient.refetchQueries({ queryKey: QUERY_KEYS.siteConfig() });
       toast({
         title: 'Appearance saved',
         description: 'Your changes are now live.',
@@ -404,9 +410,13 @@ export default function AppearanceEditor() {
         variant: 'destructive',
       });
     },
+    onSettled: () => {
+      isSavingRef.current = false;
+    },
   });
 
   const onSubmit = handleSubmit((data) => {
+    isSavingRef.current = true;
     saveMutation.mutate(data);
   });
 

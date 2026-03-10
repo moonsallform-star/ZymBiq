@@ -148,11 +148,11 @@ export function useSiteConfig(): {
   const { data, isLoading, error } = useQuery<ParsedSiteConfig, Error>({
     queryKey: QUERY_KEYS.siteConfig(),
     queryFn: fetchSiteConfig,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
     retry: 1,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Sync animation intensity and loaded flag into Zustand whenever data arrives

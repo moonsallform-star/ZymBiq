@@ -16,6 +16,8 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/hooks/use-site-config";
+import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/constants";
 import { useStore } from "@/store/index";
 import { cloudinaryLoader } from "@/lib/cloudinary-loader";
 import { Button } from "@/components/ui/button";
