@@ -301,9 +301,9 @@ export default function AdminProjectsClient({
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           {/* Table header */}
-          <div className="grid grid-cols-[2rem_3rem_1fr_10rem_8rem_7rem_7rem_7rem] items-center gap-3 border-b border-border bg-muted/5 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted">
+          <div className="min-w-[700px] grid grid-cols-[2rem_3rem_1fr_10rem_8rem_7rem_7rem_7rem] items-center gap-3 border-b border-border bg-muted/5 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted">
             <span aria-hidden />
             <span>Img</span>
             <span>Title</span>
@@ -320,7 +320,7 @@ export default function AdminProjectsClient({
                 <div
                   ref={droppable.innerRef}
                   {...droppable.droppableProps}
-                  className="divide-y divide-border"
+                  className="divide-y divide-border min-w-[700px]"
                 >
                   {projects.map((project, index) => (
                     <Draggable

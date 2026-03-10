@@ -37,7 +37,7 @@ export default async function AdminProjectsPage() {
   }));
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
+    <div className="space-y-6 p-6 lg:p-8 min-w-0">
       <div>
         <h1 className="text-2xl font-semibold font-heading text-foreground">
           Projects
