@@ -14,24 +14,21 @@ import { usePathname } from 'next/navigation';
 const variants = {
   hidden: {
     opacity: 0,
-    y: 18,
-    filter: 'blur(4px)',
+    scale: 0.995,
   },
   enter: {
     opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
+    scale: 1,
     transition: {
-      duration: 0.38,
+      duration: 0.2,
       ease: [0.22, 1, 0.36, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: -10,
-    filter: 'blur(3px)',
+    scale: 1.005,
     transition: {
-      duration: 0.22,
+      duration: 0.15,
       ease: [0.4, 0, 1, 1],
     },
   },
