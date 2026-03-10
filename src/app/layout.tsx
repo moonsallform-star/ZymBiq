@@ -16,6 +16,8 @@ import { DEFAULT_SITE_CONFIG, SITE_CONFIG_KEYS } from "@/lib/constants";
 import type { SiteConfigAppearance, SiteConfigPlatform } from "@/types/index";
 import QueryProvider from "@/components/providers/query-provider";
 import ThemeProvider from "@/components/providers/theme-provider";
+import PageTransition from "@/components/providers/page-transition";
+import NavigationProgress from "@/components/providers/progress-bar";
 
 import "@/app/globals.css";
 import "@/styles/themes.css";
@@ -350,6 +352,7 @@ export default async function RootLayout({
           component from next-auth/react. Wrapping at root ensures useSession()
           is available anywhere in the tree without prop drilling.
         */}
+        <NavigationProgress />
         <SessionProvider>
           {/*
             QueryProvider creates the QueryClient once per session.
@@ -364,7 +367,9 @@ export default async function RootLayout({
               Full implementation lives in FILE 032.
             */}
             <ThemeProvider>
-              {children}
+              <PageTransition>
+                {children}
+              </PageTransition>
             </ThemeProvider>
           </QueryProvider>
         </SessionProvider>

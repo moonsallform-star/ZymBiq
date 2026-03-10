@@ -316,7 +316,7 @@ function ParticleMeshCanvas() {
     <Canvas
       style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%' }}
       gl={{ antialias: false, alpha: true }}
-      frameloop="demand"
+      frameloop="always"
       camera={{ position: [0, 0, 5], fov: 75 }}
     >
       {/* Captures the invalidate function so the mouse handler can call it */}
