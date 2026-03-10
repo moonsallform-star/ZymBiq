@@ -320,6 +320,11 @@ export default async function RootLayout({
           <link rel="icon" href={faviconUrl} />
         )}
         <style dangerouslySetInnerHTML={{ __html: themeStyleTag }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('zymbiq-dark-mode');if(m==='true'){document.documentElement.classList.add('dark');}else if(m==='false'){document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="bg-background text-foreground font-body antialiased">
         {/*

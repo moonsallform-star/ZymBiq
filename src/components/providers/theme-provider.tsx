@@ -8,55 +8,19 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { DEFAULT_SITE_CONFIG, SITE_CONFIG_KEYS } from '@/lib/constants';
-import type { SiteConfigAppearance } from '@/types/index';
+// ThemeProvider no longer performs async fetching.
+// The server (layout.tsx) already injects the correct 'dark' class on <html>
+// based on SiteConfig from DB. An inline blocking <script> in layout.tsx
+// handles the localStorage user override synchronously before first paint,
+// so there is zero flash of incorrect theme in any scenario.
+//
+// This component is kept as a thin wrapper so the import in layout.tsx
+// continues to work and can be extended in future (e.g. theme toggle events).
 
 export default function ThemeProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  useEffect(() => {
-    let cancelled = false;
-
-    async function applyTheme() {
-      // Check localStorage user override first
-      const localOverride = localStorage.getItem('zymbiq-dark-mode');
-      if (localOverride !== null) {
-        const isDark = localOverride === 'true';
-        if (!cancelled) {
-          document.documentElement.classList.toggle('dark', isDark);
-        }
-        return;
-      }
-
-      // Fall back to admin-configured default from siteConfig API
-      try {
-        const res = await fetch('/api/admin/site-config', { cache: 'no-store' });
-        if (!res.ok) throw new Error('fetch failed');
-        const json = await res.json() as { data: Record<string, unknown> };
-        const raw = json.data?.[SITE_CONFIG_KEYS.APPEARANCE];
-        const appearance = (typeof raw === 'object' && raw !== null
-          ? raw
-          : DEFAULT_SITE_CONFIG.appearance) as SiteConfigAppearance;
-        if (!cancelled) {
-          document.documentElement.classList.toggle('dark', !!appearance.darkMode);
-        }
-      } catch {
-        // DB unavailable — use DEFAULT_SITE_CONFIG
-        if (!cancelled) {
-          document.documentElement.classList.toggle(
-            'dark',
-            DEFAULT_SITE_CONFIG.appearance.darkMode,
-          );
-        }
-      }
-    }
-
-    void applyTheme();
-    return () => { cancelled = true; };
-  }, []);
-
   return <>{children}</>;
 }
