@@ -294,19 +294,33 @@ export default function LogoEmobot({
         animate={glowControls}
       />
 
-      {/* Outer tilt wrapper — mouse-driven spring */}
+      {/* Continuous 360° Y-axis spin layer — always rotating */}
       <motion.div
-        style={{
-          rotateX:       springX,
-          rotateY:       springY,
-          transformStyle: 'preserve-3d',
+        style={{ transformStyle: 'preserve-3d', display: 'inline-flex' }}
+        animate={{
+          rotateY: [0, 360],
+        }}
+        transition={{
+          rotateY: {
+            duration: isHovered ? 1.8 : 8,
+            repeat: Infinity,
+            ease: 'linear',
+          },
         }}
       >
-        {/* Inner autonomous motion wrapper */}
+        {/* Outer tilt wrapper — mouse-driven spring */}
         <motion.div
-          animate={controls}
-          style={{ transformStyle: 'preserve-3d', display: 'inline-flex' }}
+          style={{
+            rotateX:        springX,
+            rotateY:        springY,
+            transformStyle: 'preserve-3d',
+          }}
         >
+          {/* Inner autonomous motion wrapper */}
+          <motion.div
+            animate={controls}
+            style={{ transformStyle: 'preserve-3d', display: 'inline-flex' }}
+          >
           {logoUrl ? (
             <motion.div
               animate={{
@@ -363,6 +377,7 @@ export default function LogoEmobot({
               {platformName}
             </motion.span>
           )}
+        </motion.div>
         </motion.div>
       </motion.div>
 
