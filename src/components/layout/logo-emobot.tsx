@@ -95,8 +95,8 @@ export default function LogoEmobot({
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ── Emotion cycle ────────────────────────────────────────────────────────
-  const [emotion, setEmotion] = React.useState<EmotionState>('idle');
+  // ── Emotion cycle — runs always, not just on hover ───────────────────────
+  const [emotion, setEmotion] = React.useState<EmotionState>('curious');
   const [isHovered, setIsHovered] = React.useState(false);
   const emotionIndexRef = React.useRef(0);
 
@@ -105,15 +105,22 @@ export default function LogoEmobot({
     let timer: ReturnType<typeof setTimeout>;
 
     function cycle() {
-      emotionIndexRef.current = (emotionIndexRef.current + 1) % EMOTION_SEQUENCE.length;
-      const next = EMOTION_SEQUENCE[emotionIndexRef.current];
-      setEmotion(next);
-      timer = setTimeout(cycle, EMOTION_DURATIONS[next]);
+      // Don't override emotion while user is hovering
+      if (!isHovered) {
+        emotionIndexRef.current = (emotionIndexRef.current + 1) % EMOTION_SEQUENCE.length;
+        const next = EMOTION_SEQUENCE[emotionIndexRef.current];
+        setEmotion(next);
+        timer = setTimeout(cycle, EMOTION_DURATIONS[next]);
+      } else {
+        // Check again shortly — resume cycling after hover ends
+        timer = setTimeout(cycle, 500);
+      }
     }
 
-    timer = setTimeout(cycle, EMOTION_DURATIONS['idle']);
+    // Start immediately — don't wait 5s before first cycle
+    timer = setTimeout(cycle, 1200);
     return () => clearTimeout(timer);
-  }, [animationIntensity, prefersReduced]);
+  }, [animationIntensity, prefersReduced, isHovered]);
 
   // ── 3D tilt on mouse proximity ──────────────────────────────────────────
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -143,11 +150,16 @@ export default function LogoEmobot({
     tiltY.set(0);
   }, [tiltX, tiltY]);
 
-  // ── Derived animation values ─────────────────────────────────────────────
+  // ── Derived animation values — active always, intensified on hover ───────
   const activeEmotion: EmotionState = isHovered ? 'excited' : emotion;
-  const glowAlpha     = isHovered ? 0.6 : EMOTION_GLOW[activeEmotion];
+  const glowAlpha     = isHovered ? 0.6 : Math.max(EMOTION_GLOW[activeEmotion], 0.15);
   const [scaleMin, scaleMax] = EMOTION_SCALE[activeEmotion];
-  const whisper = EMOTION_WHISPER[activeEmotion];
+  const whisper = isHovered ? EMOTION_WHISPER[activeEmotion] : (
+    // Also show whisper during excited/happy even without hover
+    (emotion === 'excited' || emotion === 'happy' || emotion === 'curious')
+      ? EMOTION_WHISPER[emotion]
+      : null
+  );
 
   // ── Static fallback ──────────────────────────────────────────────────────
   if (animationIntensity === 'off' || prefersReduced) {
@@ -185,20 +197,20 @@ export default function LogoEmobot({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* ── Ambient glow behind the logo — breathes with emotion ── */}
+      {/* ── Ambient glow — always breathing, intensifies on hover/emotion ── */}
       <motion.div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none rounded-md"
         animate={{
           boxShadow: [
-            `0 0 ${12 + glowAlpha * 20}px ${4 + glowAlpha * 8}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 100)}%, transparent)`,
-            `0 0 ${18 + glowAlpha * 24}px ${6 + glowAlpha * 10}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 140)}%, transparent)`,
-            `0 0 ${12 + glowAlpha * 20}px ${4 + glowAlpha * 8}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 100)}%, transparent)`,
+            `0 0 ${10 + glowAlpha * 18}px ${3 + glowAlpha * 7}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 90)}%, transparent)`,
+            `0 0 ${16 + glowAlpha * 22}px ${5 + glowAlpha * 9}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 130)}%, transparent)`,
+            `0 0 ${10 + glowAlpha * 18}px ${3 + glowAlpha * 7}px color-mix(in srgb, var(--zymbiq-accent) ${Math.round(glowAlpha * 90)}%, transparent)`,
           ],
-          opacity: isHovered ? 1 : 0.7,
+          opacity: 1,
         }}
         transition={{
-          duration: isHovered ? 0.9 : 3.5,
+          duration: isHovered ? 0.8 : (activeEmotion === 'excited' || activeEmotion === 'happy' ? 1.2 : 3.2),
           repeat: Infinity,
           ease: 'easeInOut',
         }}
@@ -261,9 +273,9 @@ export default function LogoEmobot({
         )}
       </motion.div>
 
-      {/* ── Sparkle particles on hover/excited ── */}
+      {/* ── Sparkle particles — on hover OR during excited/happy emotion ── */}
       <AnimatePresence>
-        {isHovered && (
+        {(isHovered || activeEmotion === 'excited' || activeEmotion === 'happy') && (
           <>
             {[
               { x: -8,  y: -10, delay: 0,    size: 5 },
@@ -309,11 +321,11 @@ export default function LogoEmobot({
         )}
       </AnimatePresence>
 
-      {/* ── Emotional whisper tooltip ── */}
+      {/* ── Emotional whisper tooltip — shows on emotion change too ── */}
       <AnimatePresence>
-        {isHovered && whisper && (
+        {whisper && (
           <motion.div
-            className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap z-50"
+            className="absolute top-full mt-1.5 left-0 pointer-events-none whitespace-nowrap z-50"
             initial={{ opacity: 0, y: 4, scale: 0.88 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.88 }}

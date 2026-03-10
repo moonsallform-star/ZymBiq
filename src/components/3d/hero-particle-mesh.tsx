@@ -158,14 +158,19 @@ function ParticleCanvas({ reduced }: { reduced: boolean }) {
     function resize() {
       if (!canvas) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width  = canvas.offsetWidth  * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
+      // Use parent dimensions if canvas has no intrinsic size yet
+      const w = canvas.parentElement?.clientWidth  || window.innerWidth;
+      const h = canvas.parentElement?.clientHeight || window.innerHeight;
+      canvas.width  = w * dpr;
+      canvas.height = h * dpr;
+      // Reset transform before scaling — prevents scale accumulation on resize
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
     }
 
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    ro.observe(canvas.parentElement ?? canvas);
 
     // ── Rotation state ───────────────────────────────────────────────────
     let rotX = 0; // pitch (mouse Y)
@@ -221,8 +226,8 @@ function ParticleCanvas({ reduced }: { reduced: boolean }) {
       const dt = Math.min(elapsed * 0.001, 0.05); // seconds, capped
       autoT += dt;
 
-      const W = canvas.offsetWidth;
-      const H = canvas.offsetHeight;
+      const W = canvas.parentElement?.clientWidth  || canvas.offsetWidth;
+      const H = canvas.parentElement?.clientHeight || canvas.offsetHeight;
       const R = Math.min(W, H) * BASE_RADIUS;
       const cx = W * 0.5;
       const cy = H * 0.5;
