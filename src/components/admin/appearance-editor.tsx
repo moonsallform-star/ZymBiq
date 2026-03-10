@@ -442,7 +442,7 @@ export default function AppearanceEditor() {
   // ---------------------------------------------------------------------------
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-0" style={{ height: 'calc(100vh - 3.5rem)' }}>
+    <form onSubmit={onSubmit} className="flex flex-col gap-0 h-full min-h-0">
       {/* Top action bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface sticky top-0 z-10">
         <div>

@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import RealtimeProvider from "@/components/providers/realtime-provider";
 import {
-  LayoutDashboard,
   FolderOpen,
   ShoppingBag,
   Users,
@@ -211,15 +210,6 @@ function AdminTopBar({
           <ExternalLink className="h-3.5 w-3.5" />
           View Site
         </Link>
-        <Link
-          href="/dashboard"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-accent/10 hover:text-accent hover:border-accent/40"
-        >
-          <LayoutDashboard className="h-3.5 w-3.5" />
-          Dashboard
-        </Link>
         <AdminThemeToggle />
         <div className="hidden md:flex items-center gap-2">
           <span className="text-xs text-muted truncate max-w-[180px]">
@@ -255,7 +245,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--zymbiq-bg)] relative">
+    <div className="h-screen overflow-hidden bg-[var(--zymbiq-bg)] relative">
 
       {/* ── Forge canvas atmosphere — matches public layout ── */}
       <div className="forge-canvas pointer-events-none" aria-hidden="true">
@@ -295,13 +285,13 @@ export default async function AdminLayout({
       </div>
 
       {/* Main content offset by sidebar width on desktop */}
-      <div className="relative z-10 flex min-h-screen flex-col md:ml-60">
+      <div className="relative z-10 flex h-screen flex-col md:ml-60">
         <AdminTopBar
           adminName={session.user.name}
           adminEmail={session.user.email}
         />
 
-        <main className="flex-1 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 3.5rem)' }}>
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0">
           <RealtimeProvider>{children}</RealtimeProvider>
         </main>
       </div>
