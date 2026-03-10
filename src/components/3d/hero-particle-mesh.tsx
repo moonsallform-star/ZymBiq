@@ -1,7 +1,9 @@
 // =============================================================================
 // Zymbiq — src/components/3d/hero-particle-mesh.tsx
-// Three.js/R3F hero particle mesh with mouse-responsive rotation.
-// Loaded via next/dynamic with ssr: false. Never imported directly.
+// Premium GPU-instanced particle constellation. Single draw call via
+// THREE.Points. Mouse-reactive. Breathing. Depth layers. Zero React overhead
+// inside the render loop.
+// Loaded via next/dynamic with ssr: false. Never import directly.
 // =============================================================================
 
 'use client';
@@ -12,344 +14,267 @@ import * as THREE from 'three';
 import { useStore } from '@/store/index';
 
 // -----------------------------------------------------------------------------
-// Constants — tuned for premium emotional depth
+// Tuning constants
 // -----------------------------------------------------------------------------
 
-const PARTICLE_COUNT = 1200;
-const SPHERE_RADIUS  = 3.8;
-const LERP_FACTOR    = 0.018;
-
-// Three size tiers for depth perception
-const SIZE_LARGE  = 0.055;  // foreground — crisp, bright
-const SIZE_MEDIUM = 0.034;  // mid-field  — moderate
-const SIZE_SMALL  = 0.018;  // background — dim, adds depth
+const PARTICLE_COUNT  = 2200;   // total points — single draw call, cheap
+const SPHERE_RADIUS   = 4.2;
+const LERP_SPEED      = 0.022;
+const BASE_POINT_SIZE = 0.038;  // world-space; shader multiplies per-particle
 
 // -----------------------------------------------------------------------------
-// CSS variable reader
+// CSS var reader
 // -----------------------------------------------------------------------------
 
 function getCssVar(name: string): string {
   if (typeof window === 'undefined') return '#6366f1';
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#6366f1';
-}
-
-// -----------------------------------------------------------------------------
-// Geometry factories — each shape has emotional character
-// -----------------------------------------------------------------------------
-
-/** 5-pointed star — the hero shape, 30% of field */
-function createStarGeometry(r: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  const pts = 5;
-  for (let i = 0; i < pts * 2; i++) {
-    const angle = (i * Math.PI) / pts - Math.PI / 2;
-    const radius = i % 2 === 0 ? r : r * 0.42;
-    if (i === 0) shape.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-    else         shape.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-  }
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-/** Elongated diamond — elegant, 25% of field */
-function createDiamondGeometry(r: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  shape.moveTo(0,      r * 1.4);
-  shape.lineTo(r * 0.55,  0);
-  shape.lineTo(0,     -r * 1.4);
-  shape.lineTo(-r * 0.55, 0);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-/** Hexagon — structural, 20% of field */
-function createHexGeometry(r: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  for (let i = 0; i < 6; i++) {
-    const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
-    if (i === 0) shape.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
-    else         shape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
-  }
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-/** Thin cross / plus — technical feel, 15% of field */
-function createCrossGeometry(r: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  const t = r * 0.28; // arm thickness
-  shape.moveTo(-t, -r); shape.lineTo(t, -r);
-  shape.lineTo(t, -t);  shape.lineTo(r, -t);
-  shape.lineTo(r,  t);  shape.lineTo(t,  t);
-  shape.lineTo(t,  r);  shape.lineTo(-t, r);
-  shape.lineTo(-t, t);  shape.lineTo(-r, t);
-  shape.lineTo(-r, -t); shape.lineTo(-t, -t);
-  shape.closePath();
-  return new THREE.ShapeGeometry(shape);
-}
-
-/** Tiny circle — soft filler, 10% of field */
-function createDotGeometry(r: number): THREE.BufferGeometry {
-  return new THREE.CircleGeometry(r, 8);
-}
-
-// Shape IDs
-const SH_STAR    = 0;
-const SH_DIAMOND = 1;
-const SH_HEX     = 2;
-const SH_CROSS   = 3;
-const SH_DOT     = 4;
-
-// Distribution by index ratio
-function shapeFor(i: number, total: number): number {
-  const r = i / total;
-  if (r < 0.30) return SH_STAR;
-  if (r < 0.55) return SH_DIAMOND;
-  if (r < 0.75) return SH_HEX;
-  if (r < 0.90) return SH_CROSS;
-  return SH_DOT;
-}
-
-// Size tier — creates sense of depth (closer = larger)
-function sizeFor(i: number, total: number): number {
-  const r = i / total;
-  if (r < 0.20) return SIZE_LARGE;
-  if (r < 0.65) return SIZE_MEDIUM;
-  return SIZE_SMALL;
-}
-
-// -----------------------------------------------------------------------------
-// Sphere position generator — with layered shell distribution for 3D depth
-// -----------------------------------------------------------------------------
-
-function generatePositions(count: number): Float32Array {
-  const pos = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    const theta  = Math.random() * Math.PI * 2;
-    const phi    = Math.acos(2 * Math.random() - 1);
-    // Three shells: inner (intimate), mid, outer (atmospheric)
-    const shell  = Math.random();
-    const radius = shell < 0.15
-      ? SPHERE_RADIUS * (0.3 + Math.random() * 0.3)   // inner — few, close
-      : shell < 0.6
-      ? SPHERE_RADIUS * (0.65 + Math.random() * 0.35) // mid
-      : SPHERE_RADIUS * (0.95 + Math.random() * 0.35);// outer halo
-
-    pos[i * 3]     = radius * Math.sin(phi) * Math.cos(theta);
-    pos[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-    pos[i * 3 + 2] = radius * Math.cos(phi);
-  }
-  return pos;
-}
-
-// -----------------------------------------------------------------------------
-// Inner R3F scene component
-// -----------------------------------------------------------------------------
-
-interface ParticleMeshProps {
-  accentColor: string;
-  mouseRef: React.MutableRefObject<{ x: number; y: number }>;
-}
-
-function ParticleMesh({ accentColor, mouseRef }: ParticleMeshProps) {
-  const groupRef    = useRef<THREE.Group>(null);
-  const innerRef    = useRef<THREE.Group>(null); // counter-rotates for depth
-  const { invalidate } = useThree();
-
-  const rotSpeedRef = useRef<Float32Array>(new Float32Array(PARTICLE_COUNT));
-  const rotAxisRef  = useRef<Uint8Array>(new Uint8Array(PARTICLE_COUNT));
-  const pulseRef    = useRef<Float32Array>(new Float32Array(PARTICLE_COUNT)); // phase offsets
-
-  // ── Shared geometries — one per shape type × size tier ───────────────────
-  const geometries = useMemo(() => {
-    const map: Record<string, THREE.BufferGeometry> = {};
-    const sizes = [SIZE_LARGE, SIZE_MEDIUM, SIZE_SMALL];
-    const factories: Record<number, (r: number) => THREE.BufferGeometry> = {
-      [SH_STAR]:    createStarGeometry,
-      [SH_DIAMOND]: createDiamondGeometry,
-      [SH_HEX]:     createHexGeometry,
-      [SH_CROSS]:   createCrossGeometry,
-      [SH_DOT]:     createDotGeometry,
-    };
-    for (const sh of [SH_STAR, SH_DIAMOND, SH_HEX, SH_CROSS, SH_DOT]) {
-      for (const sz of sizes) {
-        map[`${sh}_${sz}`] = factories[sh](sz);
-      }
-    }
-    return map;
-  }, []);
-
-  // ── Per-shape, per-depth materials with distinct opacity/brightness ───────
-  const materials = useMemo(() => {
-    const base = new THREE.Color(accentColor);
-    const map: Record<string, THREE.MeshBasicMaterial> = {};
-
-    const opacityMap: Record<number, Record<number, number>> = {
-      [SH_STAR]:    { [SIZE_LARGE]: 0.95, [SIZE_MEDIUM]: 0.70, [SIZE_SMALL]: 0.35 },
-      [SH_DIAMOND]: { [SIZE_LARGE]: 0.85, [SIZE_MEDIUM]: 0.60, [SIZE_SMALL]: 0.28 },
-      [SH_HEX]:     { [SIZE_LARGE]: 0.75, [SIZE_MEDIUM]: 0.50, [SIZE_SMALL]: 0.22 },
-      [SH_CROSS]:   { [SIZE_LARGE]: 0.80, [SIZE_MEDIUM]: 0.55, [SIZE_SMALL]: 0.25 },
-      [SH_DOT]:     { [SIZE_LARGE]: 0.65, [SIZE_MEDIUM]: 0.42, [SIZE_SMALL]: 0.18 },
-    };
-
-    const sizes = [SIZE_LARGE, SIZE_MEDIUM, SIZE_SMALL];
-    for (const sh of [SH_STAR, SH_DIAMOND, SH_HEX, SH_CROSS, SH_DOT]) {
-      for (const sz of sizes) {
-        map[`${sh}_${sz}`] = new THREE.MeshBasicMaterial({
-          color: base,
-          transparent: true,
-          opacity: opacityMap[sh][sz],
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
-      }
-    }
-    return map;
-  }, [accentColor]);
-
-  // ── Particle data — computed once ─────────────────────────────────────────
-  const particleData = useMemo(() => {
-    const positions  = generatePositions(PARTICLE_COUNT);
-    const shapeTypes = new Uint8Array(PARTICLE_COUNT);
-    const sizeTiers  = new Float32Array(PARTICLE_COUNT);
-    const initRots   = new Float32Array(PARTICLE_COUNT * 3);
-    const speeds     = rotSpeedRef.current;
-    const axes       = rotAxisRef.current;
-    const pulses     = pulseRef.current;
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      shapeTypes[i] = shapeFor(i, PARTICLE_COUNT);
-      sizeTiers[i]  = sizeFor(i, PARTICLE_COUNT);
-      pulses[i]     = Math.random() * Math.PI * 2; // stagger breathing
-
-      // Spin speed — larger particles spin slower (premium feel)
-      const baseSpeed =
-        sizeTiers[i] === SIZE_LARGE  ? 0.0008 :
-        sizeTiers[i] === SIZE_MEDIUM ? 0.0018 : 0.003;
-      const magnitude = baseSpeed + Math.random() * baseSpeed * 1.5;
-      speeds[i] = Math.random() > 0.5 ? magnitude : -magnitude;
-
-      // Axis type — 0: Z only, 1: Z+X wobble, 2: Z+Y wobble
-      axes[i] = Math.floor(Math.random() * 3) as 0 | 1 | 2;
-
-      initRots[i * 3]     = Math.random() * Math.PI * 2;
-      initRots[i * 3 + 1] = Math.random() * Math.PI * 2;
-      initRots[i * 3 + 2] = Math.random() * Math.PI * 2;
-    }
-
-    return { positions, shapeTypes, sizeTiers, initRots };
-  }, []);
-
-  // Force initial renders
-  useEffect(() => {
-    invalidate();
-    const t1 = setTimeout(() => invalidate(), 80);
-    const t2 = setTimeout(() => invalidate(), 250);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [invalidate]);
-
-  // ── Per-frame animation ────────────────────────────────────────────────────
-  useFrame(({ clock }) => {
-    if (!groupRef.current || !innerRef.current) return;
-    const elapsed = clock.getElapsedTime();
-    const speeds  = rotSpeedRef.current;
-    const axes    = rotAxisRef.current;
-    const children = innerRef.current.children;
-
-    // Individual particle spins + subtle breathing scale
-    for (let i = 0; i < children.length; i++) {
-      children[i].rotation.z += speeds[i];
-      if (axes[i] === 1) children[i].rotation.x += speeds[i] * 0.22;
-      if (axes[i] === 2) children[i].rotation.y += speeds[i] * 0.18;
-
-      // Breathing — large particles breathe slowly, small ones flicker
-      const breatheSpeed =
-        particleData.sizeTiers[i] === SIZE_LARGE  ? 0.6 :
-        particleData.sizeTiers[i] === SIZE_MEDIUM ? 0.9 : 1.4;
-      const breathe = 0.92 + 0.08 * Math.sin(elapsed * breatheSpeed + pulseRef.current[i]);
-      children[i].scale.setScalar(breathe);
-    }
-
-    // Outer group: responds to mouse + gentle autonomous oscillation
-    const autoX = Math.sin(elapsed * 0.14) * 0.28 + Math.cos(elapsed * 0.09) * 0.12;
-    const autoY = Math.sin(elapsed * 0.09) * 0.38 + Math.cos(elapsed * 0.06) * 0.16;
-
-    const targetX = mouseRef.current.y * 0.55 + autoX;
-    const targetY = mouseRef.current.x * 0.55 + autoY;
-
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetX, LERP_FACTOR);
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetY, LERP_FACTOR * 0.6);
-
-    // Inner group: slow counter-rotation — creates parallax depth between shells
-    innerRef.current.rotation.y += 0.0006;
-    innerRef.current.rotation.x  = Math.sin(elapsed * 0.07) * 0.08;
-  });
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <group ref={groupRef}>
-      <group ref={innerRef}>
-        {Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-          const sh  = particleData.shapeTypes[i];
-          const sz  = particleData.sizeTiers[i];
-          return (
-            <mesh
-              key={i}
-              geometry={geometries[`${sh}_${sz}`]}
-              material={materials[`${sh}_${sz}`]}
-              position={[
-                particleData.positions[i * 3],
-                particleData.positions[i * 3 + 1],
-                particleData.positions[i * 3 + 2],
-              ]}
-              rotation={[
-                particleData.initRots[i * 3],
-                particleData.initRots[i * 3 + 1],
-                particleData.initRots[i * 3 + 2],
-              ]}
-            />
-          );
-        })}
-      </group>
-    </group>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
+    '#6366f1'
   );
 }
 
 // -----------------------------------------------------------------------------
-// Exported component — guards + canvas
+// Layered sphere positions
+// Three concentric shells create real perceived depth
+// -----------------------------------------------------------------------------
+
+function buildGeometry(count: number): {
+  positions: Float32Array;
+  sizes:     Float32Array;
+  phases:    Float32Array;   // per-particle phase offset for breathing
+  speeds:    Float32Array;   // per-particle rotation speed around Y
+} {
+  const positions = new Float32Array(count * 3);
+  const sizes     = new Float32Array(count);
+  const phases    = new Float32Array(count);
+  const speeds    = new Float32Array(count);
+
+  for (let i = 0; i < count; i++) {
+    // Fibonacci sphere for even distribution — avoids polar clumping
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const y     = 1 - (i / (count - 1)) * 2;           // [-1, 1]
+    const theta = goldenAngle * i;
+    const r     = Math.sqrt(1 - y * y);
+
+    // Shell assignment: 12% inner · 52% mid · 36% outer halo
+    const shellRand = Math.random();
+    const shell =
+      shellRand < 0.12 ? SPHERE_RADIUS * (0.25 + Math.random() * 0.25) :
+      shellRand < 0.64 ? SPHERE_RADIUS * (0.60 + Math.random() * 0.30) :
+                         SPHERE_RADIUS * (0.92 + Math.random() * 0.40);
+
+    positions[i * 3]     = r * Math.cos(theta) * shell;
+    positions[i * 3 + 1] = y * shell;
+    positions[i * 3 + 2] = r * Math.sin(theta) * shell;
+
+    // Size: inner = largest, outer = smallest → depth cue
+    sizes[i] =
+      shell < SPHERE_RADIUS * 0.5  ? BASE_POINT_SIZE * (1.8 + Math.random() * 0.6) :
+      shell < SPHERE_RADIUS * 0.85 ? BASE_POINT_SIZE * (1.0 + Math.random() * 0.5) :
+                                     BASE_POINT_SIZE * (0.4 + Math.random() * 0.3);
+
+    phases[i] = Math.random() * Math.PI * 2;
+    speeds[i] = (0.0003 + Math.random() * 0.0006) * (Math.random() > 0.5 ? 1 : -1);
+  }
+
+  return { positions, sizes, phases, speeds };
+}
+
+// -----------------------------------------------------------------------------
+// Custom shader material — handles per-particle size + round sprite + glow
+// -----------------------------------------------------------------------------
+
+const VERT = /* glsl */ `
+  attribute float aSize;
+  attribute float aPhase;
+  uniform float uTime;
+  uniform float uPixelRatio;
+
+  varying float vAlpha;
+
+  void main() {
+    // Breathing: each particle scales with its own phase offset
+    float breath = 0.88 + 0.12 * sin(uTime * 0.9 + aPhase);
+
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = aSize * breath * uPixelRatio * (380.0 / -mvPosition.z);
+
+    // Depth-based alpha: closer = brighter
+    float depth = clamp((-mvPosition.z - 1.0) / 10.0, 0.0, 1.0);
+    vAlpha = mix(0.95, 0.18, depth) * breath;
+
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  varying float vAlpha;
+
+  void main() {
+    // Circular soft sprite — discard corners for round points
+    vec2 uv = gl_PointCoord - 0.5;
+    float dist = length(uv);
+    if (dist > 0.5) discard;
+
+    // Soft glow falloff: bright core, soft halo
+    float core  = smoothstep(0.5, 0.0, dist);
+    float halo  = smoothstep(0.5, 0.15, dist) * 0.4;
+    float alpha = (core + halo) * vAlpha;
+
+    gl_FragColor = vec4(uColor, alpha);
+  }
+`;
+
+// -----------------------------------------------------------------------------
+// Inner R3F component — owns the Points object and per-frame updates
+// -----------------------------------------------------------------------------
+
+interface ConstellationProps {
+  accentHex: string;
+  mouseRef:  React.MutableRefObject<{ x: number; y: number }>;
+}
+
+function Constellation({ accentHex, mouseRef }: ConstellationProps) {
+  const outerRef = useRef<THREE.Points>(null);
+  const innerRef = useRef<THREE.Points>(null); // inner shell counter-rotates
+  const { gl, invalidate } = useThree();
+
+  // ── Build geometry once ───────────────────────────────────────────────────
+  const { geo, innerGeo, mat, speeds } = useMemo(() => {
+    const { positions, sizes, phases, speeds: sp } = buildGeometry(PARTICLE_COUNT);
+
+    // Split into two geometries: inner shell (first 12%) and rest
+    const splitAt = Math.floor(PARTICLE_COUNT * 0.12);
+
+    function makeGeo(start: number, end: number) {
+      const count = end - start;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(positions.slice(start * 3, end * 3), 3));
+      g.setAttribute('aSize',    new THREE.BufferAttribute(sizes.slice(start, end), 1));
+      g.setAttribute('aPhase',   new THREE.BufferAttribute(phases.slice(start, end), 1));
+      return g;
+    }
+
+    const color = new THREE.Color(accentHex);
+
+    const shaderMat = new THREE.ShaderMaterial({
+      vertexShader:   VERT,
+      fragmentShader: FRAG,
+      uniforms: {
+        uTime:       { value: 0 },
+        uColor:      { value: color },
+        uPixelRatio: { value: Math.min(gl.getPixelRatio(), 2) },
+      },
+      transparent: true,
+      depthWrite:  false,
+      blending:    THREE.AdditiveBlending,
+    });
+
+    return {
+      geo:      makeGeo(splitAt, PARTICLE_COUNT),
+      innerGeo: makeGeo(0, splitAt),
+      mat:      shaderMat,
+      speeds:   sp,
+    };
+  }, [accentHex, gl]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+      innerGeo.dispose();
+      mat.dispose();
+    };
+  }, [geo, innerGeo, mat]);
+
+  // Force first render
+  useEffect(() => {
+    invalidate();
+    const t = setTimeout(() => invalidate(), 100);
+    return () => clearTimeout(t);
+  }, [invalidate]);
+
+  // ── Per-frame loop ─────────────────────────────────────────────────────────
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    mat.uniforms.uTime.value = t;
+
+    if (!outerRef.current || !innerRef.current) return;
+
+    // Smooth mouse tracking with gentle autonomous drift
+    const driftX = Math.sin(t * 0.13) * 0.22 + Math.cos(t * 0.08) * 0.10;
+    const driftY = Math.sin(t * 0.09) * 0.30 + Math.cos(t * 0.05) * 0.12;
+
+    const targetX = mouseRef.current.y * 0.50 + driftX;
+    const targetY = mouseRef.current.x * 0.50 + driftY;
+
+    outerRef.current.rotation.x = THREE.MathUtils.lerp(
+      outerRef.current.rotation.x, targetX, LERP_SPEED
+    );
+    outerRef.current.rotation.y = THREE.MathUtils.lerp(
+      outerRef.current.rotation.y, targetY, LERP_SPEED * 0.65
+    );
+
+    // Inner shell: slow independent counter-rotation → parallax depth feel
+    innerRef.current.rotation.y += 0.0007;
+    innerRef.current.rotation.x  = Math.sin(t * 0.06) * 0.09;
+    innerRef.current.rotation.z += 0.0003;
+  });
+
+  // ── Render — two Points objects share the same ShaderMaterial ─────────────
+  return (
+    <>
+      {/* Outer + mid shells */}
+      <points ref={outerRef} geometry={geo} material={mat} />
+      {/* Inner shell — independently animated for depth */}
+      <points ref={innerRef} geometry={innerGeo} material={mat} />
+    </>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Guard wrapper — performance + intensity checks
 // -----------------------------------------------------------------------------
 
 export default function HeroParticleMesh() {
   const animationIntensity = useStore((s) => s.animationIntensity);
+
   const deviceMemory =
     typeof navigator !== 'undefined'
       ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory
       : undefined;
 
-  if (deviceMemory !== undefined && deviceMemory < 4) return null;
-  if (animationIntensity === 'off' || animationIntensity === 'reduced') return null;
+  if (deviceMemory !== undefined && deviceMemory < 2) return null;
+  if (animationIntensity === 'off') return null;
 
-  return <ParticleMeshCanvas />;
+  return <ParticleMeshCanvas reduced={animationIntensity === 'reduced'} />;
 }
 
 // -----------------------------------------------------------------------------
-// Canvas wrapper
+// Canvas wrapper — mouse tracking lives here, outside R3F tree
 // -----------------------------------------------------------------------------
 
-function ParticleMeshCanvas() {
-  const mouseRef     = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+interface CanvasProps { reduced: boolean; }
+
+function ParticleMeshCanvas({ reduced }: CanvasProps) {
+  const mouseRef      = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const invalidateRef = useRef<(() => void) | null>(null);
-  const accentColor  = useMemo(() => getCssVar('--zymbiq-accent'), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Read accent colour once on mount — CSS vars are synchronous after hydration
+  const accentHex = useMemo(() => getCssVar('--zymbiq-accent'), []); // eslint-disable-line
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    const newX = (e.clientX / window.innerWidth)  *  2 - 1;
-    const newY = -((e.clientY / window.innerHeight) * 2 - 1);
-    const dx = newX - mouseRef.current.x;
-    const dy = newY - mouseRef.current.y;
-    if (Math.abs(dx) < 0.003 && Math.abs(dy) < 0.003) return;
-    mouseRef.current = { x: newX, y: newY };
+    if (reduced) return; // no mouse tracking in reduced mode
+    const nx = (e.clientX / window.innerWidth)  * 2 - 1;
+    const ny = -((e.clientY / window.innerHeight) * 2 - 1);
+    const dx = nx - mouseRef.current.x;
+    const dy = ny - mouseRef.current.y;
+    if (Math.abs(dx) < 0.004 && Math.abs(dy) < 0.004) return;
+    mouseRef.current = { x: nx, y: ny };
     invalidateRef.current?.();
-  }, []);
+  }, [reduced]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
@@ -358,26 +283,39 @@ function ParticleMeshCanvas() {
 
   return (
     <Canvas
-      style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%' }}
-      gl={{ antialias: false, alpha: true }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 0,
+        width: '100%',
+        height: '100%',
+      }}
+      gl={{
+        antialias:        false,
+        alpha:            true,
+        powerPreference:  'high-performance',
+        stencil:          false,
+        depth:            false,        // no depth buffer needed — additive blend
+      }}
       frameloop="always"
-      camera={{ position: [0, 0, 6.5], fov: 65 }}
+      dpr={[1, 1.5]}                    // cap pixel ratio for perf
+      camera={{ position: [0, 0, 7], fov: 60 }}
     >
-      <FrameInvalidator invalidateRef={invalidateRef} />
-      <ParticleMesh accentColor={accentColor} mouseRef={mouseRef} />
+      <InvalidatorBridge invalidateRef={invalidateRef} />
+      <Constellation accentHex={accentHex} mouseRef={mouseRef} />
     </Canvas>
   );
 }
 
 // -----------------------------------------------------------------------------
-// Invalidator helper
+// Tiny bridge — exposes R3F invalidate() to the imperative mouse handler
 // -----------------------------------------------------------------------------
 
-interface FrameInvalidatorProps {
+function InvalidatorBridge({
+  invalidateRef,
+}: {
   invalidateRef: React.MutableRefObject<(() => void) | null>;
-}
-
-function FrameInvalidator({ invalidateRef }: FrameInvalidatorProps) {
+}) {
   const { invalidate } = useThree();
   useEffect(() => {
     invalidateRef.current = invalidate;

@@ -465,19 +465,13 @@ export default function Header() {
           )}
           aria-label={`${platformName} home`}
         >
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt={platformName}
-              loader={cloudinaryLoader}
-              width={120}
-              height={32}
-              className="h-8 w-auto object-contain"
-              priority
-            />
-          ) : (
-            <LogoEmobot width={110} platformName={platformName} />
-          )}
+                    <LogoEmobot
+            logoUrl={logoUrl || undefined}
+            platformName={platformName}
+            width={120}
+            height={32}
+          />
+
         </Link>
 
         {/* ── Dashboard sidebar trigger — mobile only, dashboard routes only ── */}
