@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -194,6 +194,7 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
   const [markingRead, setMarkingRead] = useState(false);
   const [movingStatus, setMovingStatus] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [currentPaymentStatus, setCurrentPaymentStatus] = useState(order.paymentStatus);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
@@ -223,6 +224,11 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
   const [loadingDevforgeProjects, setLoadingDevforgeProjects] = useState(false);
   const [savingDevforgeLink, setSavingDevforgeLink] = useState(false);
   const [devforgeLinkSaved, setDevforgeLinkSaved] = useState(false);
+
+  // Sync payment status from parent when Kanban refetches fresh data
+  useEffect(() => {
+    setCurrentPaymentStatus(order.paymentStatus);
+  }, [order.paymentStatus]);
 
   const clientName =
     order.user?.name ?? order.guestName ?? "Unknown Client";
@@ -369,6 +375,7 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
         });
         if (res.ok) {
           setCurrentStatus(newStatus as typeof currentStatus);
+          if (newStatus === "IN_DISCUSSION") setCurrentPaymentStatus("PAID");
         } else {
           const json = await res.json().catch(() => ({}));
           setStatusError(
@@ -488,10 +495,10 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
             <span />
           )}
           <Badge
-            variant={getPaymentBadgeVariant(order.paymentStatus)}
+            variant={getPaymentBadgeVariant(currentPaymentStatus)}
             className="text-[10px] px-1.5 py-0"
           >
-            {getPaymentStatusLabel(order.paymentStatus)}
+            {getPaymentStatusLabel(currentPaymentStatus)}
           </Badge>
         </div>
       </div>
@@ -565,10 +572,10 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
                   label="Payment Status"
                   value={
                     <Badge
-                      variant={getPaymentBadgeVariant(order.paymentStatus)}
+                      variant={getPaymentBadgeVariant(currentPaymentStatus)}
                       className="text-xs"
                     >
-                      {getPaymentStatusLabel(order.paymentStatus)}
+                      {getPaymentStatusLabel(currentPaymentStatus)}
                     </Badge>
                   }
                 />
@@ -908,7 +915,7 @@ export default function OrderKanbanCard({ order }: OrderKanbanCardProps) {
                   const isCurrent = currentStatus === col.status;
                   const isBlocked =
                     col.status === "DELIVERED" &&
-                    order.paymentStatus !== "PAID";
+                    currentPaymentStatus !== "PAID";
                   return (
                     <button
                       key={col.status}

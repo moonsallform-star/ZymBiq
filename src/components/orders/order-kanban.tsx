@@ -119,11 +119,8 @@ export default function OrderKanban() {
   const { data: orders = [], isLoading } = useQuery<OrderWithDetails[]>({
     queryKey: QUERY_KEY,
     queryFn: fetchAllOrders,
-    staleTime: 30_000,
-    // Poll every 30s as a lightweight fallback now that always-on Realtime
-    // is no longer mounted at layout level. Realtime can be re-added here
-    // scoped to this page component if real-time push is critical.
-    refetchInterval: 30_000,
+    staleTime: 10_000,
+    refetchInterval: 10_000,
     refetchOnWindowFocus: true,
   })
 
