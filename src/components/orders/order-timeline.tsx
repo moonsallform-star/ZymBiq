@@ -162,9 +162,6 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
         devforgeProjectId: updated.devforgeProjectId !== undefined
           ? (updated.devforgeProjectId as string | null)
           : prev.devforgeProjectId,
-        buildPhase: updated.buildPhase !== undefined
-          ? (updated.buildPhase as string | null)
-          : (prev as unknown as { buildPhase?: string | null }).buildPhase,
       }));
     },
     []
