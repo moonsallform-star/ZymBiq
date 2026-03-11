@@ -3,10 +3,16 @@
 
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
-import { SITE_CONFIG_KEYS, DEFAULT_SITE_CONFIG } from "@/lib/constants";
+import { SITE_CONFIG_KEYS } from "@/lib/constants";
 import type { SiteConfigPlatform } from "@/types/index";
 
 async function getBaseUrl(): Promise<string> {
+  // 1. Try NEXTAUTH_URL env var first (most reliable — set in Vercel dashboard)
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+
+  // 2. Try DB platform config (used when custom domain is configured in admin)
   try {
     const row = await prisma.siteConfig.findUnique({
       where: { key: SITE_CONFIG_KEYS.PLATFORM },
@@ -22,11 +28,11 @@ async function getBaseUrl(): Promise<string> {
       }
     }
   } catch {
-    // fall through
+    // DB unavailable — fall through
   }
-  return (
-    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://zymbiq.com"
-  );
+
+  // 3. Final fallback
+  return "https://zym-biq.vercel.app";
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
