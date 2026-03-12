@@ -133,7 +133,7 @@ function RejectDialog({ open, onClose, onConfirm, isPending }: RejectDialogProps
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Reason for rejection (optional)…"
-          className="min-h-[100px]"
+          className="min-h-[64px]"
         />
 
         <DialogFooter>

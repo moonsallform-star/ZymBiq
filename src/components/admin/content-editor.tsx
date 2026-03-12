@@ -459,7 +459,7 @@ function ProcessStepsTab({ content }: { content: SiteConfigContent }) {
                           value={step.description}
                           onChange={(e) => updateStep(step._id, 'description', e.target.value)}
                           placeholder="One sentence describing this step"
-                          className="min-h-[60px]"
+                          className="min-h-[40px]"
                         />
                       </FieldGroup>
                     </div>
@@ -510,7 +510,7 @@ function AboutTab({ content }: { content: SiteConfigContent }) {
           value={aboutText}
           onChange={(e) => setAboutText(e.target.value)}
           placeholder="Tell visitors about yourself and your approach…"
-          className="min-h-[180px]"
+          className="min-h-[80px]"
         />
       </FieldGroup>
       <div className="flex justify-end pt-2">
@@ -770,7 +770,7 @@ function TestimonialsTab() {
                 value={t.quote}
                 onChange={(e) => updateField(t.id, 'quote', e.target.value)}
                 placeholder="Client's testimonial…"
-                className="min-h-[80px]"
+                className="min-h-[56px]"
               />
             </FieldGroup>
             <div className="grid grid-cols-2 gap-3">
@@ -967,7 +967,7 @@ function FaqTab() {
                 value={faq.answer}
                 onChange={(e) => updateField(faq.id, 'answer', e.target.value)}
                 placeholder="Detailed answer…"
-                className="min-h-[100px]"
+                className="min-h-[56px]"
               />
             </FieldGroup>
             <div className="flex justify-end">
