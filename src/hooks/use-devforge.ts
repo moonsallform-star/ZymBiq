@@ -34,5 +34,6 @@ export function useDevforge() {
     data: data ?? null,
     isLoading,
     isError,
+    lastUpdated: data !== undefined ? new Date() : null,
   };
 }

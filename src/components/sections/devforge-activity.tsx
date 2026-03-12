@@ -26,7 +26,12 @@ export default function DevforgeActivity() {
   return (
     <section className="py-16">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="border border-border rounded-[var(--zymbiq-radius)] p-6 bg-surface">
+        <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">Currently Building</h2>
+        <p className="text-sm text-muted mt-1">Live progress from the workshop — what&apos;s being crafted right now.</p>
+      </div>
+    <div className="border border-border rounded-[var(--zymbiq-radius)] p-6 bg-surface">
           {data.activeProject ? (
             <ActiveBuild
               name={data.activeProject.name}
@@ -42,7 +47,8 @@ export default function DevforgeActivity() {
               completedAt={data.lastCompletedProject.completedAt}
             />
           ) : null}
-        </div>
+       </div>
+    </div>
       </div>
     </section>
   );
@@ -108,6 +114,12 @@ function ActiveBuild({
           <span className="text-foreground font-medium">{estimatedCompletion}</span>
         </p>
       )}
+      <p className="text-xs text-muted">
+        Last updated:{' '}
+        <span className="text-foreground font-medium">
+          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </p>
     </div>
   );
 }
@@ -125,16 +137,24 @@ function LastCompleted({ name, completedAt }: LastCompletedProps) {
   const formattedDate = formatDate(new Date(completedAt));
 
   return (
-    <div className="flex items-center gap-3">
-      <span
-        className="w-2 h-2 rounded-full bg-muted"
-        aria-hidden="true"
-      />
-      <p className="text-sm text-muted">
-        Last delivered:{' '}
-        <span className="text-foreground font-medium">{name}</span>
-        {' · '}
-        <span>{formattedDate}</span>
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <span
+          className="w-2 h-2 rounded-full bg-muted"
+          aria-hidden="true"
+        />
+        <p className="text-sm text-muted">
+          Last delivered:{' '}
+          <span className="text-foreground font-medium">{name}</span>
+          {' · '}
+          <span>{formattedDate}</span>
+        </p>
+      </div>
+      <p className="text-xs text-muted pl-5">
+        Last updated:{' '}
+        <span className="text-foreground font-medium">
+          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
       </p>
     </div>
   );
