@@ -9,7 +9,7 @@ interface BlogPostContentProps {
 
 export default function BlogPostContent({ content }: BlogPostContentProps) {
   const sanitizedContent = useMemo(() => {
-    if (typeof window === "undefined") return content;
+    if (typeof window === "undefined") return "";
 
     return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: [
